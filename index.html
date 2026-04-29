@@ -1,0 +1,856 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>記憶なき告発者 ～NEMESIS: 2087～</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap');
+
+:root {
+  --bg:    #080c1a;
+  --bg2:   #0d1427;
+  --cyan:  #00d4ff;
+  --green: #00ff9f;
+  --red:   #ff3355;
+  --orange:#ff6b35;
+  --text:  #a8ccde;
+  --bright:#d0eeff;
+  --dim:   #3a5470;
+  --font:  'Share Tech Mono','Courier New',monospace;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 15px;
+  line-height: 1.65;
+  height: 100dvh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── TITLE ── */
+#title-screen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100dvh;
+  background: radial-gradient(ellipse at 50% 40%, #0d1a3a 0%, #080c1a 70%);
+  position: relative;
+  overflow: hidden;
+}
+#title-screen::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg, transparent, transparent 3px,
+    rgba(0,212,255,.02) 3px, rgba(0,212,255,.02) 4px
+  );
+  pointer-events: none;
+}
+.t-main {
+  font-size: clamp(22px,5vw,46px);
+  color: var(--cyan);
+  text-shadow: 0 0 20px var(--cyan), 0 0 40px var(--cyan);
+  letter-spacing: .12em;
+  text-align: center;
+  margin-bottom: 6px;
+}
+.t-sub {
+  font-size: clamp(13px,2.5vw,20px);
+  color: var(--green);
+  letter-spacing: .35em;
+  text-shadow: 0 0 10px var(--green);
+  text-align: center;
+  margin-bottom: 10px;
+}
+.t-year {
+  font-size: 13px;
+  color: var(--dim);
+  letter-spacing: .2em;
+  margin-bottom: 48px;
+  text-align: center;
+}
+#start-btn {
+  padding: 13px 50px;
+  font-family: var(--font);
+  font-size: 15px;
+  letter-spacing: .2em;
+  background: transparent;
+  border: 1px solid var(--cyan);
+  color: var(--cyan);
+  cursor: pointer;
+  transition: all .2s;
+  box-shadow: 0 0 8px var(--cyan), inset 0 0 8px rgba(0,212,255,.05);
+}
+#start-btn:hover {
+  background: rgba(0,212,255,.12);
+  box-shadow: 0 0 24px var(--cyan), 0 0 48px rgba(0,212,255,.25);
+}
+
+/* ── GAME SCREEN ── */
+#game-screen {
+  display: none;
+  flex-direction: column;
+  height: 100dvh;
+}
+
+/* HUD */
+#hud {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 7px 16px;
+  background: var(--bg2);
+  border-bottom: 1px solid var(--cyan);
+  box-shadow: 0 2px 12px rgba(0,212,255,.18);
+  flex-shrink: 0;
+}
+#loc-name { color: var(--cyan); font-size: 14px; letter-spacing: .08em; }
+#mem-count { color: var(--green); font-size: 13px; }
+
+/* MAIN AREA */
+#main-area {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+/* OUTPUT */
+#output-wrap {
+  flex: 1;
+  overflow-y: auto;
+  padding: 14px 18px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--dim) var(--bg);
+}
+#output-wrap::-webkit-scrollbar { width: 4px; }
+#output-wrap::-webkit-scrollbar-thumb { background: var(--dim); }
+
+.op { margin-bottom: 8px; }
+.op.sep    { color: var(--dim); font-size: 11px; }
+.op.loc    { color: var(--cyan); font-size: 16px; border-left: 3px solid var(--cyan); padding-left: 9px; margin-top: 18px; }
+.op.flavor { color: #486070; font-style: italic; }
+.op.exits  { color: var(--dim); font-size: 12px; }
+.op.pickup { color: #7ec87e; }
+.op.desc   { color: #7aaecc; }
+.op.event  { color: var(--bright); }
+.op.mem    { color: var(--green); border-left: 2px solid var(--green); padding-left: 8px; }
+.op.warn   { color: var(--orange); }
+.op.used   { color: var(--dim); }
+
+/* INVENTORY SIDEBAR */
+#inv-panel {
+  width: 175px;
+  flex-shrink: 0;
+  padding: 12px 10px;
+  background: var(--bg2);
+  border-left: 1px solid rgba(0,212,255,.18);
+  overflow-y: auto;
+}
+.p-title {
+  font-size: 10px;
+  letter-spacing: .3em;
+  color: var(--cyan);
+  border-bottom: 1px solid rgba(0,212,255,.25);
+  padding-bottom: 5px;
+  margin-bottom: 8px;
+}
+.inv-item {
+  font-size: 12px;
+  color: var(--text);
+  padding: 3px 0;
+  border-bottom: 1px solid rgba(255,255,255,.04);
+}
+.inv-item::before { content: '◆ '; color: var(--dim); font-size: 9px; }
+#dots { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+.dot {
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  border: 1px solid var(--dim);
+  transition: all .4s;
+}
+.dot.on { background: var(--green); border-color: var(--green); box-shadow: 0 0 6px var(--green); }
+
+/* BUTTON AREA */
+#btn-area {
+  flex-shrink: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 9px 14px;
+  background: var(--bg2);
+  border-top: 1px solid rgba(0,212,255,.18);
+  min-height: 54px;
+  align-items: center;
+}
+.gbtn {
+  padding: 7px 13px;
+  font-family: var(--font);
+  font-size: 13px;
+  background: transparent;
+  border: 1px solid var(--dim);
+  color: var(--text);
+  cursor: pointer;
+  transition: all .15s;
+  white-space: nowrap;
+}
+.gbtn.main { border-color: rgba(0,212,255,.4); color: var(--bright); }
+.gbtn:hover:not(.off) { border-color: var(--cyan); color: var(--cyan); background: rgba(0,212,255,.06); box-shadow: 0 0 10px rgba(0,212,255,.25); }
+.gbtn.cancel { border-color: rgba(255,255,255,.15); color: var(--dim); }
+.gbtn.cancel:hover { border-color: var(--orange); color: var(--orange); box-shadow: none; background: transparent; }
+.gbtn.danger { border-color: rgba(255,51,85,.45); color: #cc4466; }
+.gbtn.danger:hover { border-color: var(--red); color: var(--red); box-shadow: 0 0 10px rgba(255,51,85,.3); background: rgba(255,51,85,.05); }
+.gbtn.off { opacity: .4; cursor: default; }
+
+/* MEMORY OVERLAY */
+#mem-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.9);
+  z-index: 100;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+#mem-box {
+  max-width: 540px;
+  width: 100%;
+  border: 1px solid var(--green);
+  box-shadow: 0 0 30px var(--green), 0 0 60px rgba(0,255,159,.15);
+  background: #050e0a;
+  padding: 22px 26px;
+}
+.mem-title {
+  color: var(--green);
+  text-align: center;
+  font-size: 13px;
+  letter-spacing: .3em;
+  border-bottom: 1px solid rgba(0,255,159,.3);
+  padding-bottom: 11px;
+  margin-bottom: 16px;
+  animation: blink 1.6s ease-in-out infinite;
+}
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:.45} }
+#mem-text {
+  color: #90dab0;
+  line-height: 1.85;
+  min-height: 80px;
+  margin-bottom: 20px;
+  font-size: 14px;
+}
+#mem-close {
+  display: block;
+  margin: 0 auto;
+  padding: 8px 32px;
+  font-family: var(--font);
+  font-size: 13px;
+  letter-spacing: .2em;
+  background: transparent;
+  border: 1px solid var(--green);
+  color: var(--green);
+  cursor: pointer;
+  opacity: 0;
+  pointer-events: none;
+  transition: all .2s;
+}
+#mem-close.ready { opacity: 1; pointer-events: auto; }
+#mem-close:hover { background: rgba(0,255,159,.1); box-shadow: 0 0 12px var(--green); }
+
+/* ENDING */
+#end-screen {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 24px;
+  text-align: center;
+}
+#end-text {
+  max-width: 580px;
+  font-size: 15px;
+  line-height: 2;
+  margin-bottom: 36px;
+}
+#retry-btn {
+  padding: 10px 36px;
+  font-family: var(--font);
+  font-size: 14px;
+  letter-spacing: .2em;
+  background: transparent;
+  border: 1px solid var(--dim);
+  color: var(--dim);
+  cursor: pointer;
+  transition: all .2s;
+}
+#retry-btn:hover { border-color: var(--cyan); color: var(--cyan); }
+
+/* RESPONSIVE */
+@media (max-width: 580px) {
+  body { font-size: 14px; }
+  #main-area { flex-direction: column-reverse; }
+  #inv-panel {
+    width: 100%;
+    border-left: none;
+    border-top: 1px solid rgba(0,212,255,.18);
+    max-height: 90px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    white-space: nowrap;
+    padding: 7px 12px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .p-title { display: none; }
+  .inv-item { display: inline-block; margin-right: 0; }
+  #dots { flex-wrap: nowrap; }
+  #inv-empty { font-size: 12px; color: var(--dim); }
+  .gbtn { font-size: 12px; padding: 6px 10px; }
+}
+</style>
+</head>
+<body>
+
+<!-- タイトル -->
+<div id="title-screen">
+  <div class="t-main">記憶なき告発者</div>
+  <div class="t-sub">～ NEMESIS : 2087 ～</div>
+  <div class="t-year">西暦2087年。あなたは目覚めた。</div>
+  <button id="start-btn" onclick="startGame()">▶ ゲームを始める</button>
+</div>
+
+<!-- ゲーム画面 -->
+<div id="game-screen">
+  <div id="hud">
+    <span id="loc-name">―</span>
+    <span id="mem-count">記憶: 0 / 5</span>
+  </div>
+  <div id="main-area">
+    <div id="output-wrap"><div id="output"></div></div>
+    <div id="inv-panel">
+      <div>
+        <div class="p-title">INVENTORY</div>
+        <div id="inv-list"><span id="inv-empty" style="color:var(--dim);font-size:12px">空</span></div>
+      </div>
+      <div>
+        <div class="p-title" style="margin-top:12px">MEMORY</div>
+        <div id="dots"></div>
+      </div>
+    </div>
+  </div>
+  <div id="btn-area"></div>
+</div>
+
+<!-- 記憶フラッシュバック -->
+<div id="mem-overlay">
+  <div id="mem-box">
+    <div class="mem-title">【 記憶フラッシュバック 】</div>
+    <div id="mem-text"></div>
+    <button id="mem-close" onclick="resolveMemory&&resolveMemory()">続ける ▶</button>
+  </div>
+</div>
+
+<!-- エンディング -->
+<div id="end-screen">
+  <div id="end-text"></div>
+  <button id="retry-btn" onclick="location.reload()">↺ もう一度プレイする</button>
+</div>
+
+<script>
+'use strict';
+
+// ═══════════════════════════════════════════
+// データ
+// ═══════════════════════════════════════════
+
+const DIR = { north:'北', south:'南', east:'東', west:'西', up:'上（屋上へ）', down:'下（地下へ）' };
+
+const LOC = {
+  hospital_room: {
+    name: '廃病院の一室',
+    desc: '薄汚れたベッドが一台。天井からは蛍光灯がちらついている。\n窓の外は灰色の空。壁には「区画7-C 隔離室」と貼り紙がある。\nあなたは床に倒れていた――ここがどこで、いつかも分からない。',
+    fv:   '目が覚める。\n全身が重い。頭の中は空っぽだ。\n名前も、顔も、過去も――何も思い出せない。\nただ一つだけ確かなことがある。ここから出なければならない。',
+    conn: { north: 'dark_alley' },
+    lock: {},
+    items: ['wristband','syringe'],
+    events: [],
+  },
+  dark_alley: {
+    name: '薄暗い路地',
+    desc: '廃病院の裏口を抜けると、狭い路地が広がる。\n頭上にはホログラム広告が明滅し、路面には油膜の浮く水たまり。\n2087年の都市は、腐りかけた未来の匂いがした。',
+    fv:   '外の空気が肺に刺さる。\n高層ビルが空を埋め尽くし、どこかからサイレンの音が聞こえる。\n急がなければ――そんな確信だけが、本能として残っていた。',
+    conn: { south:'hospital_room', east:'subway_station' },
+    lock: {},
+    items: ['memo','burner_phone','ic_card'],
+    events: [],
+  },
+  subway_station: {
+    name: '地下鉄駅【区画7-C】',
+    desc: '薄暗いホームに監視カメラが無数に並ぶ。赤い点滅光がゆっくりと左右に動く。\n改札には生体認証スキャナー。人影はまばらだが、どこかに視線を感じる。',
+    fv:   '駅に入った瞬間、全身の毛が逆立つ。\nスーツ姿の男がこちらをじっと見ている。\n――エージェントだ。直感がそう告げた。',
+    conn: { west:'dark_alley', south:'factory_basement' },
+    lock: { south:{ flag:'factory_unlocked', text:'地下へ続く通路の扉は電子ロックがかかっている。通行許可証が必要だ。' } },
+    items: [],
+    events: ['agent_encounter'],
+  },
+  factory_basement: {
+    name: '廃工場の地下室',
+    desc: '錆びついた機材が並ぶ地下室。空気は淀んでいる。\n壁を走るケーブルの束。かつてここで何かが行われていた痕跡がある。\n奥の隅に古い記録機器が置かれている。',
+    fv:   '地下へ続く階段を降りると、記憶の断片が頭をよぎる。\n――ここに来たことがある。そんな気がした。',
+    conn: { north:'subway_station', up:'rooftop' },
+    lock: { up:{ flag:'rooftop_unlocked', text:'屋上への非常階段は電子ロックがかかっている。アクセスコードが必要だ。' } },
+    items: ['recorder','data_chip'],
+    events: [],
+  },
+  rooftop: {
+    name: '高層ビルの屋上',
+    desc: '都市の夜景が360度広がる。風が強い。\n中央に衛星通信端末が設置されている。小型だが、特殊な改造が施されている。\nチップスロットが青く光っている。――これを使えば、すべてを世界に知らせることができる。',
+    fv:   '屋上に出た瞬間、記憶が一気に流れ込んできた。\nあなたはここに来るために戦ってきた。\n終わりが、近い。',
+    conn: { down:'factory_basement' },
+    lock: {},
+    items: ['satellite_terminal'],
+    events: [],
+  },
+};
+
+const ITEM = {
+  wristband:  { name:'患者リストバンド', desc:'白いプラスチック製のリストバンド。\nバーコードと管理番号が印刷されている。\nその下に、かすかに手書きの文字が見える。\n「K-77 / 記憶消去プロトコル適用済」', pt:'リストバンドを拾い上げた。', fixed:false, usable:false, ie:'memory_1', ue:null },
+  syringe:    { name:'注射器（空）',     desc:'透明な液体が残っていた形跡のある使用済み注射器。\nラベルには「NEX-R / 神経遮断剤」と印刷されている。\n――この薬を誰かに打たれた感覚が、かすかに蘇る。', pt:'注射器を慎重に拾い上げた。', fixed:false, usable:false, ie:'memory_2', ue:null },
+  memo:       { name:'暗号メモ',         desc:'濡れて滲んだ紙切れ。数字と文字が書き殴られている。\n「47-ALPHA / 衛星回線 / NEMESIS」\n――NEMESISという文字を見た瞬間、脳の奥で何かが震えた。', pt:'メモを拾った。', fixed:false, usable:false, ie:'memory_3', ue:null },
+  burner_phone:{ name:'使い捨て端末',    desc:'安価な使い捨てスマートフォン。バッテリー残量は僅か。\nロック画面にパスワード入力欄がある。\n――正しいコードを入力すれば、何かにアクセスできるかもしれない。', pt:'使い捨て端末を拾った。', fixed:false, usable:true, ie:null, ue:'use_burner_phone' },
+  ic_card:    { name:'ICカード',         desc:'地下鉄の定期券型ICカード。名前欄は空白。\n裏面に小さく「区画7-C 全域通行許可」と刻印されている。', pt:'ICカードを拾った。', fixed:false, usable:true, ie:null, ue:'use_ic_card' },
+  recorder:   { name:'記録装置',         desc:'手のひらサイズの録音・録画デバイス。外装は傷だらけ。\n再生ボタンを押すと、かすかに音声が流れ始める。\n「……NEXUSによる市民監視データは既に1億件を超えた。\n　政府はこれを知っている。いや――命令したのは政府だ……」\nノイズの後、音声は途切れた。', pt:'記録装置を回収した。', fixed:false, usable:false, ie:'memory_4', ue:null },
+  data_chip:  { name:'証拠データチップ', desc:'爪ほどの大きさの記録チップ。\n――これを見た瞬間、確信した。\nこのチップにすべてが入っている。\nNEXUSの監視網、政府との秘密契約書、1億人分の個人データ。\nあなたが命を懸けて隠した、最後の証拠だ。', pt:'証拠データチップを手に取った。手が震える。', fixed:false, usable:false, ie:'memory_5', ue:null },
+  satellite_terminal: { name:'衛星通信端末', desc:'改造された衛星通信端末。通常の検閲回線を迂回し、\n直接グローバルネットワークにデータを送信できる。\nチップスロットが一つ、青く光っている。', pt:null, fixed:true, usable:true, ie:null, ue:'use_satellite_terminal' },
+};
+
+const EV = {
+  memory_1: { type:'memory', frag:'白衣の男が覗き込んでくる。\n「K-77、意識は戻ったか」\nお前の名前はもうない。番号だけだ。\n――でも、違う。あなたには名前があった。\nキラ。あなたの名前は、キラだ。', flag:'knows_identity', sum:'記憶の断片①：あなたの名前はキラ' },
+  memory_2: { type:'memory', frag:'冷たい台の上で、身動きが取れない。\n「神経遮断剤の投与を開始する。記憶は72時間以内に消去される」\n抵抗しようとしたが、体が言うことを聞かなかった。\n――あなたは捕まった。何かを暴こうとして、捕まった。', flag:'knows_experiment', sum:'記憶の断片②：あなたは捕まり、記憶を消された' },
+  memory_3: { type:'memory', frag:'暗い部屋で、誰かと話している。\n「コードは NEMESIS だ。忘れるな」\n「衛星端末さえ見つければ、すべてを送信できる」\n仲間がいた。あなたには、仲間がいた。', flag:'knows_code', sum:'記憶の断片③：コードは NEMESIS、衛星端末が鍵' },
+  memory_4: { type:'memory', frag:'モニターの前で、膨大なデータを見ている。\n「NEXUS。これが組織の名前だ」\n「彼らは市民全員を監視している。政府の命令で」\n怒りと恐怖が混ざり合った感情が、記憶と共に蘇る。', flag:'knows_org', sum:'記憶の断片④：組織の名前はNEXUS、政府と繋がっている' },
+  memory_5: { type:'memory', frag:'あなたは一人で廃工場に忍び込んでいた。\n手に、小さなチップを持って。\n「ここなら見つからない。屋上の端末が見つかれば――」\nすべてが繋がった。このチップが、世界を変える。', flag:'knows_truth', sum:'記憶の断片⑤：あなたがチップをここに隠した' },
+
+  agent_encounter: {
+    type: 'encounter', doneFlag: 'agent_encountered',
+    text: 'スーツの男がゆっくりとこちらへ近づいてくる。\n耳には通信イヤホン。腰のホルスターに、武器の膨らみ。\n視線が交差した瞬間、男の目が細くなった。',
+    choices: [
+      { label:'ICカードを使って改札を通り、自然に振る舞う', need:'ic_card',     flag:'escaped_agent', res:'ICカードをスキャナーにかざす。ピッ、と電子音が鳴る。\n男はじっとこちらを見ていたが、やがて視線を外した。\n心臓の音が耳に聞こえる中、あなたはホームへ歩き出した。\n――うまくいった。', bad:false },
+      { label:'柱の影に素早く身を潜める',                   need:null,          flag:'escaped_agent', res:'素早く柱の陰に身を潜める。\n男の足音が近づき――そして遠ざかった。\n危なかった。あなたはゆっくりと息を吐いた。', bad:false },
+      { label:'男に向かってまっすぐ歩いていく',             need:null,          flag:'caught',        res:'男の前に立つ。\n「K-77、見つけた」\n耳に入ったその言葉が、最後だった。\n電流が走り、意識が遠くなる――。', bad:true },
+    ],
+  },
+
+  use_burner_phone: { type:'story', reqFlag:'knows_code', noFlagText:'ロック画面が表示されている。パスワードが分からない。\n何か手がかりが必要だ。', reqLoc:null, noLocText:null, text:'パスワード入力欄に「NEMESIS」と入力する。\n画面が一瞬フリーズし、暗号化されたメッセージが表示された。\n\n  「屋上端末 非常用アクセスコード: 47-ALPHA」\n  「チップをスロットに挿入し、コードを入力せよ」\n\n端末は自動でシャットダウンした。証拠を残さないために。', unlockFlag:'rooftop_unlocked', sum:'屋上端末へのアクセスコードを入手した' },
+  use_ic_card:      { type:'story', reqFlag:null, noFlagText:null, reqLoc:'subway_station', noLocText:'ここでICカードを使う場所がない。', text:'ICカードを通路の認証スキャナーにかざす。\nピッ――「区画7-C 全域通行許可 / 承認」\n地下への扉がゆっくりと開いた。', unlockFlag:'factory_unlocked', sum:'地下通路への扉が開いた' },
+
+  use_satellite_terminal: { type:'ending_check' },
+
+  good_ending: { type:'ending', result:'good',
+    text:'証拠データチップをスロットに挿入する。\nコード「47-ALPHA」を入力すると、端末が起動した。\n\nプログレスバーがゆっくりと伸びていく。\n10%……30%……60%……\n\n地平線の向こうで夜明けが始まる。\n都市の灯りが、少しだけ優しく見えた。\n\n90%……そして――\n\n「送信完了」\n\nNEXUSの全データが、世界中のサーバーに拡散された。\n一億人分の監視記録。政府との秘密契約。\nすべてが白日の下に晒される。\n\nあなたはキラ。内部告発者。\n記憶は戻らないかもしれない。\nでも、あなたがやるべきことは、果たした。',
+    title:'― GOOD ENDING ―', tag:'「真実は、もう消せない」' },
+  bad_ending_caught: { type:'ending', result:'bad',
+    text:'――気がつくと、また白い天井を見ていた。\n「K-77の再捕獲を確認。\n 記憶消去プロトコルを再実行します」\n\n遠くなる意識の中で、あなたは思った。\nキラ――私の名前は、キラだった。',
+    title:'― BAD ENDING ―', tag:'「記憶は、また消えた」' },
+};
+
+// ═══════════════════════════════════════════
+// 状態
+// ═══════════════════════════════════════════
+
+let P = {
+  loc: 'hospital_room',
+  inv: [],
+  memCount: 0,
+  flags: new Set(),
+  visited: new Set(),
+  over: false,
+};
+
+// ═══════════════════════════════════════════
+// ユーティリティ
+// ═══════════════════════════════════════════
+
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+let resolveMemory = null;
+const $ = id => document.getElementById(id);
+
+// ═══════════════════════════════════════════
+// テキスト出力
+// ═══════════════════════════════════════════
+
+async function tw(text, cls = '', delay = 18) {
+  const out = $('output');
+  const p = document.createElement('p');
+  p.className = 'op ' + cls;
+  out.appendChild(p);
+  for (const ch of text) {
+    if (ch === '\n') p.appendChild(document.createElement('br'));
+    else p.insertAdjacentText('beforeend', ch);
+    out.scrollTop = out.scrollHeight;
+    await sleep(delay);
+  }
+  out.scrollTop = out.scrollHeight;
+}
+
+function fast(text, cls = '') {
+  const out = $('output');
+  const p = document.createElement('p');
+  p.className = 'op ' + cls;
+  p.innerHTML = text.replace(/\n/g, '<br>');
+  out.appendChild(p);
+  out.scrollTop = out.scrollHeight;
+}
+
+function sep() { fast('─────────────────────────────', 'sep'); }
+
+// ═══════════════════════════════════════════
+// HUD / インベントリ
+// ═══════════════════════════════════════════
+
+function hud() {
+  $('loc-name').textContent = '■ ' + LOC[P.loc].name;
+  $('mem-count').textContent = `記憶: ${P.memCount} / 5`;
+}
+
+function refreshInv() {
+  const list = $('inv-list');
+  if (P.inv.length === 0) {
+    list.innerHTML = '<span id="inv-empty" style="color:var(--dim);font-size:12px">空</span>';
+  } else {
+    list.innerHTML = P.inv.map(id => `<div class="inv-item">${ITEM[id].name}</div>`).join('');
+  }
+  const dots = $('dots');
+  dots.innerHTML = '';
+  for (let i = 0; i < 5; i++) {
+    const d = document.createElement('span');
+    d.className = 'dot' + (i < P.memCount ? ' on' : '');
+    dots.appendChild(d);
+  }
+}
+
+// ═══════════════════════════════════════════
+// ボタン
+// ═══════════════════════════════════════════
+
+function showBtns(defs) {
+  return new Promise(resolve => {
+    const area = $('btn-area');
+    area.innerHTML = '';
+    defs.forEach((b, i) => {
+      const el = document.createElement('button');
+      el.className = 'gbtn' + (b.main?' main':'') + (b.cancel?' cancel':'') + (b.danger?' danger':'') + (b.off?' off':'');
+      el.textContent = (i + 1) + '. ' + b.label;
+      if (!b.off) el.addEventListener('click', () => resolve(i), { once: true });
+      area.appendChild(el);
+    });
+  });
+}
+
+function clearBtns() { $('btn-area').innerHTML = ''; }
+
+// ═══════════════════════════════════════════
+// 記憶フラッシュバック
+// ═══════════════════════════════════════════
+
+async function memFlash(text) {
+  const ov = $('mem-overlay');
+  const mt = $('mem-text');
+  const mc = $('mem-close');
+  mt.innerHTML = '';
+  mc.classList.remove('ready');
+  ov.style.display = 'flex';
+  await sleep(350);
+  for (const ch of text) {
+    if (ch === '\n') mt.appendChild(document.createElement('br'));
+    else mt.insertAdjacentText('beforeend', ch);
+    await sleep(20);
+  }
+  mc.classList.add('ready');
+  await new Promise(r => { resolveMemory = r; });
+  ov.style.display = 'none';
+  resolveMemory = null;
+}
+
+// ═══════════════════════════════════════════
+// 場所表示
+// ═══════════════════════════════════════════
+
+async function showLoc(isMove) {
+  const loc = LOC[P.loc];
+  hud();
+
+  if (isMove && !P.visited.has(P.loc) && loc.fv) {
+    sep();
+    await tw(loc.fv, 'flavor');
+    await sleep(200);
+  }
+  P.visited.add(P.loc);
+
+  sep();
+  fast('■ ' + loc.name, 'loc');
+  await tw(loc.desc, '');
+
+  const pickable = loc.items.filter(id => !ITEM[id].fixed && !P.inv.includes(id));
+  const fixed    = loc.items.filter(id =>  ITEM[id].fixed);
+
+  if (pickable.length) fast('床に ' + pickable.map(id => ITEM[id].name).join('、') + ' が落ちている。', 'pickup');
+  if (fixed.length)    fast(fixed.map(id => ITEM[id].name).join('、') + ' がある。', 'event');
+
+  const exits = Object.entries(loc.conn).map(([d, dest]) => {
+    const locked = loc.lock[d] && !P.flags.has(loc.lock[d].flag);
+    return (DIR[d] || d) + '→' + LOC[dest].name + (locked ? '[施錠]' : '');
+  });
+  if (exits.length) fast('出口: ' + exits.join(' / '), 'exits');
+
+  if (isMove) {
+    for (const evId of loc.events) {
+      const ev = EV[evId];
+      if (ev && ev.doneFlag && !P.flags.has(ev.doneFlag)) {
+        await runEv(evId);
+        if (P.over) return;
+      }
+    }
+  }
+}
+
+// ═══════════════════════════════════════════
+// メインループ
+// ═══════════════════════════════════════════
+
+const MAIN_MENU = [
+  { label:'移動する',           main:true },
+  { label:'アイテムを拾う',     main:true },
+  { label:'アイテムを調べる',   main:true },
+  { label:'アイテムを使う',     main:true },
+  { label:'インベントリを確認', main:true },
+  { label:'周囲を見回す',       main:true },
+];
+
+async function loop() {
+  while (!P.over) {
+    const c = await showBtns(MAIN_MENU);
+    clearBtns();
+    await [doMove, doPickup, doInspect, doUse, doInv, doLook][c]();
+  }
+}
+
+// ═══════════════════════════════════════════
+// アクション
+// ═══════════════════════════════════════════
+
+async function doMove() {
+  const loc = LOC[P.loc];
+  const conns = Object.entries(loc.conn);
+  const btns = conns.map(([d, dest]) => {
+    const locked = loc.lock[d] && !P.flags.has(loc.lock[d].flag);
+    return { label: (DIR[d]||d) + ' → ' + LOC[dest].name + (locked ? '  [施錠中]' : '') };
+  });
+  btns.push({ label:'キャンセル', cancel:true });
+
+  const c = await showBtns(btns);
+  clearBtns();
+  if (c >= conns.length) return;
+
+  const [d, dest] = conns[c];
+  if (loc.lock[d] && !P.flags.has(loc.lock[d].flag)) {
+    await tw(loc.lock[d].text, 'warn');
+    return;
+  }
+  P.loc = dest;
+  await showLoc(true);
+}
+
+async function doPickup() {
+  const loc = LOC[P.loc];
+  const list = loc.items.filter(id => !ITEM[id].fixed && !P.inv.includes(id));
+  if (!list.length) { await tw('拾えるアイテムはない。', 'warn'); return; }
+
+  const btns = list.map(id => ({ label: ITEM[id].name }));
+  btns.push({ label:'キャンセル', cancel:true });
+
+  const c = await showBtns(btns);
+  clearBtns();
+  if (c >= list.length) return;
+
+  const id = list[c];
+  P.inv.push(id);
+  refreshInv();
+  await tw(ITEM[id].pt, 'pickup');
+}
+
+async function doInspect() {
+  const loc = LOC[P.loc];
+  const fx = loc.items.filter(id => ITEM[id].fixed);
+  const all = [...P.inv, ...fx];
+  if (!all.length) { await tw('調べられるものがない。', 'warn'); return; }
+
+  const btns = all.map(id => ({ label: ITEM[id].name + (fx.includes(id) ? '  [設置物]' : '') }));
+  btns.push({ label:'キャンセル', cancel:true });
+
+  const c = await showBtns(btns);
+  clearBtns();
+  if (c >= all.length) return;
+
+  const id = all[c];
+  await tw(ITEM[id].desc, 'desc');
+
+  if (ITEM[id].ie) {
+    const ev = EV[ITEM[id].ie];
+    if (!ev.flag || !P.flags.has(ev.flag)) await runEv(ITEM[id].ie);
+  }
+}
+
+async function doUse() {
+  const loc = LOC[P.loc];
+  const inv = P.inv.filter(id => ITEM[id].usable);
+  const fx  = loc.items.filter(id => ITEM[id].fixed && ITEM[id].usable);
+  const all = [...inv, ...fx];
+  if (!all.length) { await tw('使えるアイテムがない。', 'warn'); return; }
+
+  const btns = all.map(id => ({ label: ITEM[id].name + (fx.includes(id) ? '  [設置物]' : '') }));
+  btns.push({ label:'キャンセル', cancel:true });
+
+  const c = await showBtns(btns);
+  clearBtns();
+  if (c >= all.length) return;
+
+  const id = all[c];
+  if (ITEM[id].ue) await runEv(ITEM[id].ue);
+}
+
+async function doInv() {
+  if (!P.inv.length) {
+    await tw('インベントリは空だ。', 'warn');
+  } else {
+    await tw('[ 所持アイテム ]\n' + P.inv.map(id => '・' + ITEM[id].name).join('\n'), 'event');
+  }
+  await tw('記憶の断片: ' + P.memCount + ' / 5' + (P.memCount === 5 ? '  ★ すべて回収済み' : ''), 'mem');
+}
+
+async function doLook() { await showLoc(false); }
+
+// ═══════════════════════════════════════════
+// イベント
+// ═══════════════════════════════════════════
+
+async function runEv(id) {
+  const ev = EV[id];
+  if (!ev) return;
+  const fn = { memory:evMemory, encounter:evEncounter, story:evStory, ending_check:evEndCheck, ending:evEnding }[ev.type];
+  if (fn) await fn(ev);
+}
+
+async function evMemory(ev) {
+  if (P.flags.has(ev.flag)) return;
+  await memFlash(ev.frag);
+  P.flags.add(ev.flag);
+  P.memCount++;
+  hud(); refreshInv();
+  await tw('✦ ' + ev.sum, 'mem');
+  if (P.memCount === 5) { await sleep(200); await tw('★ すべての記憶が戻った。真実が見えてきた。', 'mem'); }
+}
+
+async function evEncounter(ev) {
+  if (P.flags.has(ev.doneFlag)) return;
+  await tw(ev.text, 'event');
+  await sleep(200);
+
+  let sel = null;
+  while (!sel) {
+    const btns = ev.choices.map(c => ({
+      label: c.label + (c.need && !P.inv.includes(c.need) ? '  ※ ' + ITEM[c.need].name + 'が必要' : ''),
+      danger: c.bad,
+    }));
+    const c = await showBtns(btns);
+    clearBtns();
+    const choice = ev.choices[c];
+    if (choice.need && !P.inv.includes(choice.need)) {
+      await tw('しかし、' + ITEM[choice.need].name + 'を持っていない。', 'warn');
+    } else {
+      sel = choice;
+    }
+  }
+
+  await tw(sel.res, 'event');
+  P.flags.add(sel.flag);
+  P.flags.add(ev.doneFlag);
+  if (sel.bad) { await sleep(700); await runEv('bad_ending_caught'); }
+}
+
+async function evStory(ev) {
+  if (ev.reqLoc && P.loc !== ev.reqLoc) { await tw(ev.noLocText || 'ここでは使えない。', 'warn'); return; }
+  if (ev.reqFlag && !P.flags.has(ev.reqFlag)) { await tw(ev.noFlagText || '何も起きなかった。', 'warn'); return; }
+  if (ev.unlockFlag && P.flags.has(ev.unlockFlag)) { await tw('（すでに使用済みだ）', 'used'); return; }
+  await tw(ev.text, 'event');
+  if (ev.unlockFlag) P.flags.add(ev.unlockFlag);
+  if (ev.sum) { await sleep(150); await tw('✦ ' + ev.sum, 'mem'); }
+}
+
+async function evEndCheck() {
+  if (P.loc !== 'rooftop') { await tw('ここでは使えない。', 'warn'); return; }
+  if (!P.inv.includes('data_chip')) { await tw('端末のスロットが空だ。\n送信するデータが必要だ。', 'warn'); return; }
+  await sleep(300);
+  await runEv('good_ending');
+}
+
+async function evEnding(ev) {
+  P.over = true;
+  clearBtns();
+
+  const scr = $('end-screen');
+  const txt = $('end-text');
+  const isGood = ev.result === 'good';
+  scr.style.background = isGood ? '#030e06' : '#0e0306';
+  const col = isGood ? 'var(--green)' : '#ff3355';
+  txt.innerHTML = '';
+  txt.style.color = col;
+  scr.style.display = 'flex';
+
+  for (const ch of ev.text) {
+    if (ch === '\n') txt.appendChild(document.createElement('br'));
+    else txt.insertAdjacentText('beforeend', ch);
+    await sleep(isGood ? 28 : 38);
+  }
+
+  await sleep(700);
+  const t = document.createElement('div');
+  t.style.cssText = `font-size:20px;margin-top:22px;letter-spacing:.3em;text-shadow:0 0 18px ${col};`;
+  t.textContent = ev.title;
+  txt.appendChild(t);
+
+  await sleep(400);
+  const tag = document.createElement('div');
+  tag.style.cssText = 'font-size:14px;margin-top:10px;color:var(--dim);';
+  tag.textContent = ev.tag;
+  txt.appendChild(tag);
+}
+
+// ═══════════════════════════════════════════
+// 起動
+// ═══════════════════════════════════════════
+
+async function startGame() {
+  $('title-screen').style.display = 'none';
+  $('game-screen').style.display = 'flex';
+  hud(); refreshInv();
+  await tw('西暦2087年。あなたは目覚めた。', 'flavor', 28);
+  await sleep(300);
+  await showLoc(true);
+  loop();
+}
+</script>
+</body>
+</html>
