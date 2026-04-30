@@ -22,13 +22,17 @@
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
+/* iOS Safari: -webkit-fill-available でアドレスバー込みの高さを正確に確保 */
+html { height: 100%; }
+
 body {
   background: transparent;
   color: var(--text);
   font-family: var(--font);
   font-size: 15px;
   line-height: 1.65;
-  height: 100dvh;
+  height: 100%;
+  min-height: -webkit-fill-available;
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -36,11 +40,12 @@ body {
 
 /* ── TITLE ── */
 #title-screen {
+  flex: 1;           /* body の縦幅を flex で埋める (dvh 依存しない) */
+  min-height: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  height: 100dvh;
   background: radial-gradient(ellipse at 50% 40%, rgba(13,26,58,0.75) 0%, rgba(8,12,26,0.35) 70%);
   position: relative;
   overflow: hidden;
@@ -56,7 +61,7 @@ body {
   pointer-events: none;
 }
 .t-main {
-  font-size: clamp(22px,5vw,46px);
+  font-size: clamp(20px,5vw,44px);
   color: var(--cyan);
   text-shadow: 0 0 20px var(--cyan), 0 0 40px var(--cyan);
   letter-spacing: .12em;
@@ -64,7 +69,7 @@ body {
   margin-bottom: 6px;
 }
 .t-sub {
-  font-size: clamp(13px,2.5vw,20px);
+  font-size: clamp(12px,2.5vw,19px);
   color: var(--green);
   letter-spacing: .35em;
   text-shadow: 0 0 10px var(--green);
@@ -72,16 +77,16 @@ body {
   margin-bottom: 10px;
 }
 .t-year {
-  font-size: 13px;
+  font-size: 12px;
   color: var(--dim);
   letter-spacing: .2em;
-  margin-bottom: 48px;
+  margin-bottom: 40px;
   text-align: center;
 }
 #start-btn {
-  padding: 13px 50px;
+  padding: 12px 44px;
   font-family: var(--font);
-  font-size: 15px;
+  font-size: 14px;
   letter-spacing: .2em;
   background: transparent;
   border: 1px solid var(--cyan);
@@ -90,16 +95,18 @@ body {
   transition: all .2s;
   box-shadow: 0 0 8px var(--cyan), inset 0 0 8px rgba(0,212,255,.05);
 }
-#start-btn:hover {
+#start-btn:hover, #start-btn:active {
   background: rgba(0,212,255,.12);
   box-shadow: 0 0 24px var(--cyan), 0 0 48px rgba(0,212,255,.25);
 }
 
 /* ── GAME SCREEN ── */
 #game-screen {
-  display: none;
+  display: none;        /* startGame() で flex に切り替え */
   flex-direction: column;
-  height: 100dvh;
+  flex: 1;
+  min-height: 0;        /* flex overflow を防ぐ必須設定 */
+  overflow: hidden;
 }
 
 /* HUD */
@@ -107,38 +114,41 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 7px 16px;
+  padding: 6px 14px;
   background: var(--bg2);
   border-bottom: 1px solid var(--cyan);
-  box-shadow: 0 2px 12px rgba(0,212,255,.18);
+  box-shadow: 0 2px 10px rgba(0,212,255,.15);
   flex-shrink: 0;
 }
-#loc-name { color: var(--cyan); font-size: 14px; letter-spacing: .08em; }
-#mem-count { color: var(--green); font-size: 13px; }
+#loc-name { color: var(--cyan); font-size: 13px; letter-spacing: .06em; }
+#mem-count { color: var(--green); font-size: 12px; }
 
-/* MAIN AREA */
+/* MAIN AREA: output + inventory を横並び */
 #main-area {
   display: flex;
   flex: 1;
+  min-height: 0;        /* ← これがないと flex 子が overflow する */
   overflow: hidden;
 }
 
 /* OUTPUT */
 #output-wrap {
   flex: 1;
+  min-height: 0;        /* ← 同上 */
   overflow-y: auto;
-  padding: 14px 18px;
+  padding: 12px 16px;
+  -webkit-overflow-scrolling: touch; /* iOS慣性スクロール */
   scrollbar-width: thin;
-  scrollbar-color: var(--dim) var(--bg);
+  scrollbar-color: var(--dim) transparent;
 }
-#output-wrap::-webkit-scrollbar { width: 4px; }
+#output-wrap::-webkit-scrollbar { width: 3px; }
 #output-wrap::-webkit-scrollbar-thumb { background: var(--dim); }
 
 .op { margin-bottom: 8px; }
-.op.sep    { color: var(--dim); font-size: 11px; }
-.op.loc    { color: var(--cyan); font-size: 16px; border-left: 3px solid var(--cyan); padding-left: 9px; margin-top: 18px; }
+.op.sep    { color: var(--dim); font-size: 10px; }
+.op.loc    { color: var(--cyan); font-size: 15px; border-left: 3px solid var(--cyan); padding-left: 9px; margin-top: 16px; }
 .op.flavor { color: #486070; font-style: italic; }
-.op.exits  { color: var(--dim); font-size: 12px; }
+.op.exits  { color: var(--dim); font-size: 11px; }
 .op.pickup { color: #7ec87e; }
 .op.desc   { color: #7aaecc; }
 .op.event  { color: var(--bright); }
@@ -148,23 +158,25 @@ body {
 
 /* INVENTORY SIDEBAR */
 #inv-panel {
-  width: 175px;
+  width: 160px;
   flex-shrink: 0;
-  padding: 12px 10px;
+  min-height: 0;
+  padding: 10px 9px;
   background: var(--bg2);
-  border-left: 1px solid rgba(0,212,255,.18);
+  border-left: 1px solid rgba(0,212,255,.15);
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 .p-title {
-  font-size: 10px;
+  font-size: 9px;
   letter-spacing: .3em;
   color: var(--cyan);
-  border-bottom: 1px solid rgba(0,212,255,.25);
-  padding-bottom: 5px;
-  margin-bottom: 8px;
+  border-bottom: 1px solid rgba(0,212,255,.22);
+  padding-bottom: 4px;
+  margin-bottom: 7px;
 }
 .inv-item {
-  font-size: 12px;
+  font-size: 11px;
   color: var(--text);
   padding: 3px 0;
   border-bottom: 1px solid rgba(255,255,255,.04);
@@ -172,87 +184,97 @@ body {
 .inv-item::before { content: '◆ '; color: var(--dim); font-size: 9px; }
 #dots { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
 .dot {
-  width: 10px; height: 10px;
+  width: 9px; height: 9px;
   border-radius: 50%;
   border: 1px solid var(--dim);
   transition: all .4s;
 }
-.dot.on { background: var(--green); border-color: var(--green); box-shadow: 0 0 6px var(--green); }
+.dot.on { background: var(--green); border-color: var(--green); box-shadow: 0 0 5px var(--green); }
 
 /* BUTTON AREA */
 #btn-area {
   flex-shrink: 0;
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
-  padding: 9px 14px;
+  gap: 5px;
+  padding: 8px 12px;
   background: var(--bg2);
-  border-top: 1px solid rgba(0,212,255,.18);
-  min-height: 54px;
-  align-items: center;
+  border-top: 1px solid rgba(0,212,255,.15);
+  min-height: 48px;
+  max-height: 36vh;     /* ← ボタン増加でもレイアウトを壊さない */
+  overflow-y: auto;
+  align-items: flex-start;
+  -webkit-overflow-scrolling: touch;
 }
 .gbtn {
-  padding: 7px 13px;
+  padding: 6px 11px;
   font-family: var(--font);
-  font-size: 13px;
+  font-size: 12px;
   background: transparent;
   border: 1px solid var(--dim);
   color: var(--text);
   cursor: pointer;
   transition: all .15s;
   white-space: nowrap;
+  -webkit-tap-highlight-color: transparent;
 }
-.gbtn.main { border-color: rgba(0,212,255,.4); color: var(--bright); }
-.gbtn:hover:not(.off) { border-color: var(--cyan); color: var(--cyan); background: rgba(0,212,255,.06); box-shadow: 0 0 10px rgba(0,212,255,.25); }
-.gbtn.cancel { border-color: rgba(255,255,255,.15); color: var(--dim); }
-.gbtn.cancel:hover { border-color: var(--orange); color: var(--orange); box-shadow: none; background: transparent; }
-.gbtn.danger { border-color: rgba(255,51,85,.45); color: #cc4466; }
-.gbtn.danger:hover { border-color: var(--red); color: var(--red); box-shadow: 0 0 10px rgba(255,51,85,.3); background: rgba(255,51,85,.05); }
-.gbtn.off { opacity: .4; cursor: default; }
+.gbtn.main { border-color: rgba(0,212,255,.38); color: var(--bright); }
+.gbtn:hover:not(.off), .gbtn:active:not(.off) {
+  border-color: var(--cyan); color: var(--cyan);
+  background: rgba(0,212,255,.06); box-shadow: 0 0 8px rgba(0,212,255,.22);
+}
+.gbtn.cancel { border-color: rgba(255,255,255,.14); color: var(--dim); }
+.gbtn.cancel:hover, .gbtn.cancel:active { border-color: var(--orange); color: var(--orange); box-shadow: none; background: transparent; }
+.gbtn.danger { border-color: rgba(255,51,85,.4); color: #cc4466; }
+.gbtn.danger:hover, .gbtn.danger:active { border-color: var(--red); color: var(--red); box-shadow: 0 0 8px rgba(255,51,85,.28); background: rgba(255,51,85,.05); }
+.gbtn.off { opacity: .35; cursor: default; }
 
 /* MEMORY OVERLAY */
 #mem-overlay {
   display: none;
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,.9);
+  background: rgba(0,0,0,.88);
   z-index: 100;
   align-items: center;
   justify-content: center;
-  padding: 20px;
+  padding: 16px;
 }
 #mem-box {
-  max-width: 540px;
+  max-width: 520px;
   width: 100%;
+  max-height: 88vh;     /* ← 画面からはみ出さない */
+  overflow-y: auto;
   border: 1px solid var(--green);
-  box-shadow: 0 0 30px var(--green), 0 0 60px rgba(0,255,159,.15);
+  box-shadow: 0 0 28px var(--green), 0 0 56px rgba(0,255,159,.12);
   background: #050e0a;
-  padding: 22px 26px;
+  padding: 20px 22px;
+  -webkit-overflow-scrolling: touch;
 }
 .mem-title {
   color: var(--green);
   text-align: center;
-  font-size: 13px;
+  font-size: 12px;
   letter-spacing: .3em;
-  border-bottom: 1px solid rgba(0,255,159,.3);
-  padding-bottom: 11px;
-  margin-bottom: 16px;
+  border-bottom: 1px solid rgba(0,255,159,.28);
+  padding-bottom: 10px;
+  margin-bottom: 14px;
   animation: blink 1.6s ease-in-out infinite;
 }
-@keyframes blink { 0%,100%{opacity:1} 50%{opacity:.45} }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:.4} }
 #mem-text {
   color: #90dab0;
   line-height: 1.85;
-  min-height: 80px;
-  margin-bottom: 20px;
+  min-height: 60px;
+  margin-bottom: 18px;
   font-size: 14px;
 }
 #mem-close {
   display: block;
   margin: 0 auto;
-  padding: 8px 32px;
+  padding: 8px 28px;
   font-family: var(--font);
-  font-size: 13px;
+  font-size: 12px;
   letter-spacing: .2em;
   background: transparent;
   border: 1px solid var(--green);
@@ -260,10 +282,10 @@ body {
   cursor: pointer;
   opacity: 0;
   pointer-events: none;
-  transition: all .2s;
+  transition: opacity .2s;
 }
 #mem-close.ready { opacity: 1; pointer-events: auto; }
-#mem-close:hover { background: rgba(0,255,159,.1); box-shadow: 0 0 12px var(--green); }
+#mem-close:hover, #mem-close:active { background: rgba(0,255,159,.1); }
 
 /* ENDING */
 #end-screen {
@@ -274,19 +296,21 @@ body {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 40px 24px;
+  padding: 32px 20px;
   text-align: center;
+  overflow-y: auto;     /* ← エンディングテキスト長い場合もスクロール可 */
+  -webkit-overflow-scrolling: touch;
 }
 #end-text {
-  max-width: 580px;
-  font-size: 15px;
+  max-width: 560px;
+  font-size: 14px;
   line-height: 2;
-  margin-bottom: 36px;
+  margin-bottom: 32px;
 }
 #retry-btn {
-  padding: 10px 36px;
+  padding: 10px 32px;
   font-family: var(--font);
-  font-size: 14px;
+  font-size: 13px;
   letter-spacing: .2em;
   background: transparent;
   border: 1px solid var(--dim);
@@ -294,31 +318,44 @@ body {
   cursor: pointer;
   transition: all .2s;
 }
-#retry-btn:hover { border-color: var(--cyan); color: var(--cyan); }
+#retry-btn:hover, #retry-btn:active { border-color: var(--cyan); color: var(--cyan); }
 
-/* RESPONSIVE */
+/* ── RESPONSIVE (スマホ ≤ 580px) ── */
 @media (max-width: 580px) {
-  body { font-size: 14px; }
+  body { font-size: 13px; }
+
+  /* スマホは inventory を下に固定ストリップとして表示 */
   #main-area { flex-direction: column-reverse; }
+
   #inv-panel {
     width: 100%;
+    min-height: unset;
+    height: 68px;         /* 固定高さでレイアウト安定 */
+    flex-shrink: 0;
     border-left: none;
-    border-top: 1px solid rgba(0,212,255,.18);
-    max-height: 90px;
+    border-top: 1px solid rgba(0,212,255,.15);
     overflow-x: auto;
     overflow-y: hidden;
     white-space: nowrap;
-    padding: 7px 12px;
+    padding: 5px 10px;
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 8px;
   }
   .p-title { display: none; }
-  .inv-item { display: inline-block; margin-right: 0; }
+  .inv-item { display: inline-block; }
   #dots { flex-wrap: nowrap; }
-  #inv-empty { font-size: 12px; color: var(--dim); }
-  .gbtn { font-size: 12px; padding: 6px 10px; }
+
+  #output-wrap { padding: 10px 12px; }
+
+  .gbtn { font-size: 12px; padding: 6px 9px; }
+  #btn-area {
+    padding: 7px 10px;
+    gap: 4px;
+    max-height: 30vh;
+  }
 }
+
 /* ── STARS ── */
 #stars-canvas {
   position: fixed;
@@ -565,7 +602,7 @@ function showBtns(defs) {
       const el = document.createElement('button');
       el.className = 'gbtn' + (b.main?' main':'') + (b.cancel?' cancel':'') + (b.danger?' danger':'') + (b.off?' off':'');
       el.textContent = (i + 1) + '. ' + b.label;
-      if (!b.off) el.addEventListener('click', () => resolve(i), { once: true });
+      if (!b.off) el.addEventListener('click', () => { playClick(); resolve(i); }, { once: true });
       area.appendChild(el);
     });
   });
@@ -767,6 +804,7 @@ async function runEv(id) {
 
 async function evMemory(ev) {
   if (P.flags.has(ev.flag)) return;
+  playMemory();   // フラッシュバック演出と同時に再生開始
   await memFlash(ev.frag);
   P.flags.add(ev.flag);
   P.memCount++;
@@ -914,10 +952,146 @@ async function evEnding(ev) {
 })();
 
 // ═══════════════════════════════════════════
+// サウンド (Web Audio API)
+// iOS Safari 対応: AudioContext はユーザー操作時に生成する
+// ═══════════════════════════════════════════
+
+const _ACtx = window.AudioContext || window.webkitAudioContext;
+let _ac = null;      // AudioContext インスタンス
+let _ambient = null; // 環境音ノード群
+
+// AudioContext を取得 or 再開（iOS は suspended になる場合がある）
+function _getAC() {
+  if (!_ac) _ac = new _ACtx();
+  if (_ac.state === 'suspended') _ac.resume();
+  return _ac;
+}
+
+// ── 環境音（ループ） ──
+// 穏やかな宇宙パッド: A3-E4 完全5度 + 上位倍音 (sine のみ)
+// 20秒周期のトレモロで"宇宙の呼吸"を表現。低域を抑え軽やかさを優先。
+function startAmbient() {
+  if (_ambient) return;
+  const ac = _getAC();
+
+  const master = ac.createGain();
+  master.gain.value = 0.055;
+  master.connect(ac.destination);
+
+  // A3-E4 完全5度を軸に、上へ向かって音を積む
+  [
+    [220.00, 0.22], // A3  – やさしい土台
+    [329.63, 0.18], // E4  – 完全5度（開放的・明るい）
+    [440.00, 0.11], // A4  – オクターブ
+    [659.25, 0.05], // E5  – 高域の輝き
+    [880.00, 0.02], // A5  – 遠い星のきらめき
+  ].forEach(([f, vol]) => {
+    const osc = ac.createOscillator();
+    const g   = ac.createGain();
+    osc.type = 'sine';
+    osc.frequency.value = f;
+    g.gain.value = vol;
+    osc.connect(g);
+    g.connect(master);
+    osc.start();
+  });
+
+  // 20秒周期の超ゆっくりトレモロ
+  const lfo  = ac.createOscillator();
+  const lfoG = ac.createGain();
+  lfo.type = 'sine';
+  lfo.frequency.value = 0.05;
+  lfoG.gain.value = 0.013;
+  lfo.connect(lfoG);
+  lfoG.connect(master.gain);
+  lfo.start();
+
+  _ambient = true;
+}
+
+// ── 選択肢クリック音 ──
+// E5 + B5 の sine 2音による軽いベル音。短く澄んだ電子チャイム。
+function playClick() {
+  if (!_ac) return;
+  const ac  = _getAC();
+  const now = ac.currentTime;
+  // [周波数Hz, ピーク音量, 減衰秒]
+  [[659.25, 0.09, 0.20], [987.77, 0.04, 0.12]].forEach(([f, vol, dur]) => {
+    const o = ac.createOscillator();
+    const g = ac.createGain();
+    o.type = 'sine';
+    o.frequency.value = f;
+    g.gain.setValueAtTime(0, now);
+    g.gain.linearRampToValueAtTime(vol, now + 0.007); // 瞬時の立ち上がり
+    g.gain.exponentialRampToValueAtTime(0.001, now + dur);
+    o.connect(g);
+    g.connect(ac.destination);
+    o.start(now);
+    o.stop(now + dur + 0.01);
+  });
+}
+
+// ── 記憶フラッシュバック音 ──
+// Phase1: 星のまたたき (高域 sine パルス)
+// Phase2: D 長調ペンタトニック昇降 (清らかなアルペジオ)
+// Phase3: D メジャー和音の余韻 (幻想的に消えていく)
+function playMemory() {
+  if (!_ac) return;
+  const ac  = _getAC();
+  const now = ac.currentTime;
+  const master = ac.createGain();
+  master.gain.value = 0.22;
+  master.connect(ac.destination);
+
+  // Phase 1: 星のまたたき – A5,C#6,E6 の soft sine パルス (0 〜 0.36s)
+  [[880.00, 0.07], [1108.73, 0.05], [1318.51, 0.03]].forEach(([f, vol], i) => {
+    const o = ac.createOscillator();
+    const g = ac.createGain();
+    const t = now + i * 0.12;
+    o.type = 'sine';
+    o.frequency.value = f;
+    g.gain.setValueAtTime(0, t);
+    g.gain.linearRampToValueAtTime(vol, t + 0.008);
+    g.gain.exponentialRampToValueAtTime(0.001, t + 0.18);
+    o.connect(g); g.connect(master);
+    o.start(t); o.stop(t + 0.20);
+  });
+
+  // Phase 2: D 長調ペンタトニック上昇 D4,E4,F#4,A4,B4,D5,E5,F#5 (0.4 〜 1.4s)
+  [293.66, 329.63, 369.99, 440.00, 493.88, 587.33, 659.25, 739.99].forEach((f, i) => {
+    const o = ac.createOscillator();
+    const g = ac.createGain();
+    const t = now + 0.40 + i * 0.13;
+    o.type = 'sine';
+    o.frequency.value = f;
+    g.gain.setValueAtTime(0, t);
+    g.gain.linearRampToValueAtTime(0.13, t + 0.025);
+    g.gain.exponentialRampToValueAtTime(0.001, t + 0.48);
+    o.connect(g); g.connect(master);
+    o.start(t); o.stop(t + 0.55);
+  });
+
+  // Phase 3: D メジャー和音の余韻 D5,F#5,A5 (1.45 〜 3.7s)
+  [[587.33, 0.11], [739.99, 0.08], [880.00, 0.06]].forEach(([f, vol]) => {
+    const o = ac.createOscillator();
+    const g = ac.createGain();
+    const t = now + 1.45;
+    o.type = 'sine';
+    o.frequency.value = f;
+    g.gain.setValueAtTime(0, t);
+    g.gain.linearRampToValueAtTime(vol, t + 0.12);
+    g.gain.exponentialRampToValueAtTime(0.001, t + 2.3);
+    o.connect(g); g.connect(master);
+    o.start(t); o.stop(t + 2.5);
+  });
+}
+
+// ═══════════════════════════════════════════
 // 起動
 // ═══════════════════════════════════════════
 
 async function startGame() {
+  startAmbient(); // ユーザー操作内で呼ぶことで iOS Safari の制限を回避
   $('title-screen').style.display = 'none';
   $('game-screen').style.display = 'flex';
   hud(); refreshInv();
