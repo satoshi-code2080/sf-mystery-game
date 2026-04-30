@@ -517,7 +517,7 @@ const LOC = {
     name: '薄暗い路地',
     desc: '廃病院の裏口を抜けると、狭い路地が広がる。\n頭上にはホログラム広告が明滅し、路面には油膜の浮く水たまり。\n2087年の都市は、腐りかけた未来の匂いがした。',
     fv:   '外の空気が肺に刺さる。\n高層ビルが空を埋め尽くし、どこかからサイレンの音が聞こえる。\n急がなければ――そんな確信だけが、本能として残っていた。',
-    conn: { south:'hospital_room', east:'subway_station' },
+    conn: { south:'hospital_room', north:'hacker_hideout', east:'subway_station' },
     lock: {},
     items: ['memo','burner_phone','ic_card'],
     events: [],
@@ -526,8 +526,8 @@ const LOC = {
     name: '地下鉄駅【区画7-C】',
     desc: '薄暗いホームに監視カメラが無数に並ぶ。赤い点滅光がゆっくりと左右に動く。\n改札には生体認証スキャナー。人影はまばらだが、どこかに視線を感じる。',
     fv:   '駅に入った瞬間、全身の毛が逆立つ。\nスーツ姿の男がこちらをじっと見ている。\n――エージェントだ。直感がそう告げた。',
-    conn: { west:'dark_alley', south:'factory_basement' },
-    lock: { south:{ flag:'factory_unlocked', text:'地下へ続く通路の扉は電子ロックがかかっている。通行許可証が必要だ。' } },
+    conn: { west:'dark_alley', south:'factory_basement', east:'surveillance_center' },
+    lock: { south:{ flag:'factory_unlocked', text:'地下へ続く通路の扉は電子ロックがかかっている。通行許可証が必要だ。' }, east:{ flag:'surveillance_unlocked', text:'監視センターへの扉はセキュリティロックがかかっている。アクセスキーが必要だ。' } },
     items: [],
     events: ['agent_encounter'],
   },
@@ -549,6 +549,24 @@ const LOC = {
     items: ['satellite_terminal'],
     events: [],
   },
+  hacker_hideout: {
+    name: 'ハッカーの隠れ家',
+    desc: '狭い部屋に複数のホログラムモニターが浮かび上がり、コードが絶え間なく流れている。\n床には電子機器のパーツが散乱し、改造された端末が何台も積み重なっている。\n奥のチェアに、フードを被った人影が座っていた。',
+    fv:   '扉の隙間から青白い光が漏れていた。\n中に入ると――モニター越しに、こちらを見ている目が一つ。\n「……お前がK-77か」\n低い声が、暗闇から響いた。',
+    conn: { south:'dark_alley' },
+    lock: {},
+    items: ['terminal_key'],
+    events: ['hacker_encounter'],
+  },
+  surveillance_center: {
+    name: '監視センター',
+    desc: '壁一面に監視カメラの映像が流れるモニターが並んでいる。\nすべての交差点、すべての路地、すべての部屋。\nNEXUSはこの都市のすべてを見ていた。\n奥の解析端末が静かに点滅している。',
+    fv:   'ドアが軋みながら開く。\n数百のモニターが映す映像の中に――見覚えのある顔があった。\n自分だ。あなた自身が、ここに映っている。\n――いつ撮られた映像だ？',
+    conn: { west:'subway_station' },
+    lock: {},
+    items: ['security_log'],
+    events: [],
+  },
 };
 
 const ITEM = {
@@ -560,6 +578,8 @@ const ITEM = {
   recorder:   { name:'記録装置',         desc:'手のひらサイズの録音・録画デバイス。外装は傷だらけ。\n再生ボタンを押すと、かすかに音声が流れ始める。\n「……NEXUSによる市民監視データは既に1億件を超えた。\n　政府はこれを知っている。いや――命令したのは政府だ……」\nノイズの後、音声は途切れた。', pt:'記録装置を回収した。', fixed:false, usable:false, ie:'memory_4', ue:null },
   data_chip:  { name:'証拠データチップ', desc:'爪ほどの大きさの記録チップ。\n――これを見た瞬間、確信した。\nこのチップにすべてが入っている。\nNEXUSの監視網、政府との秘密契約書、1億人分の個人データ。\nあなたが命を懸けて隠した、最後の証拠だ。', pt:'証拠データチップを手に取った。手が震える。', fixed:false, usable:false, ie:'memory_5', ue:null },
   satellite_terminal: { name:'衛星通信端末', desc:'改造された衛星通信端末。通常の検閲回線を迂回し、\n直接グローバルネットワークにデータを送信できる。\nチップスロットが一つ、青く光っている。', pt:null, fixed:true, usable:true, ie:null, ue:'use_satellite_terminal' },
+  terminal_key: { name:'端末アクセスキー', desc:'小型の暗号化アクセスキーデバイス。表面に「SC-7C ACCESS」と刻まれている。\n地下鉄駅のどこかのパネルに差せば、何かが開くかもしれない。', pt:'端末アクセスキーを受け取った。', fixed:false, usable:true, ie:null, ue:'use_terminal_key' },
+  security_log: { name:'監視ログファイル', desc:'解析端末からダウンロードした監視ログ。\nスクロールすると「K-77」のコードネームが何度も登場する。\n最新エントリ――「K-77、記憶消去後の覚醒を確認。\n　証拠チップの所在は不明。監視継続」\nNEXUSは、まだチップの場所を知らない。', pt:'監視ログファイルを入手した。', fixed:false, usable:false, ie:'inspect_security_log', ue:null },
 };
 
 const EV = {
@@ -581,6 +601,31 @@ const EV = {
 
   use_burner_phone: { type:'story', reqFlag:'knows_code', noFlagText:'ロック画面が表示されている。パスワードが分からない。\n何か手がかりが必要だ。', reqLoc:null, noLocText:null, text:'パスワード入力欄に「NEMESIS」と入力する。\n画面が一瞬フリーズし、暗号化されたメッセージが表示された。\n\n  「屋上端末 非常用アクセスコード: 47-ALPHA」\n  「チップをスロットに挿入し、コードを入力せよ」\n\n端末は自動でシャットダウンした。証拠を残さないために。', unlockFlag:'rooftop_unlocked', sum:'屋上端末へのアクセスコードを入手した' },
   use_ic_card:      { type:'story', reqFlag:null, noFlagText:null, reqLoc:'subway_station', noLocText:'ここでICカードを使う場所がない。', text:'ICカードを通路の認証スキャナーにかざす。\nピッ――「区画7-C 全域通行許可 / 承認」\n地下への扉がゆっくりと開いた。', unlockFlag:'factory_unlocked', sum:'地下通路への扉が開いた' },
+
+  use_terminal_key: { type:'story', reqFlag:null, noFlagText:null, reqLoc:'subway_station', noLocText:'このキーを使える場所がここには見当たらない。', text:'改札脇の隠しパネルにアクセスキーを差し込む。\nシステムが起動し、「SC-7C 監視センター / 解錠承認」と表示された。\n壁の一部がスライドし、暗い通路が現れた。', unlockFlag:'surveillance_unlocked', sum:'監視センターへの通路が開いた' },
+
+  inspect_security_log: { type:'story', reqFlag:null, noFlagText:null, reqLoc:null, noLocText:null, text:'ログを読み進めると、全貌が見えてくる。\nNEXUSはあなたの全行動を把握していた。しかし――。\n「K-77、証拠チップの所在は依然不明。\n　記憶消去による情報封鎖は有効と判断。監視継続」\n彼らはチップの隠し場所を知らない。\nあなたが命がけで隠したから。まだ、間に合う。', unlockFlag:'knows_nexus_blind', sum:'監視ログ解析：NEXUSはまだチップの場所を知らない' },
+
+  hacker_encounter: {
+    type: 'encounter', doneFlag: 'hacker_encountered',
+    text: 'フードの人物がゆっくりとこちらを向く。\nモニターの青白い光に照らされた顔は、まだ若い。\n「……ようやく目が覚めたか、K-77。\n　お前のことは追っていた。三日間ずっと」\nホログラムモニターに、あなたの行動記録が映し出された。',
+    choices: [
+      {
+        label: '「NEMESIS」のメモを見せ、仲間だと伝える',
+        need: 'memo',
+        flag: 'hacker_helped',
+        res: 'ハッカーはメモをスキャンし、しばらく黙った。\n「……本物か。NEMESISのコードだ」\n「地下鉄の奥に監視センターがある。NEXUSの監視記録が全部そこにある」\n「これを使え。駅のパネルに差せばドアが開く」\nハッカーは小型のデバイスをテーブルに置き、背を向けた。\n「――お前のこと、応援してるよ。K-77」',
+        bad: false,
+      },
+      {
+        label: '何も明かさず、様子を見る',
+        need: null,
+        flag: 'hacker_met',
+        res: '「……話す気がないなら無理強いはしない」\nハッカーはモニターに向き直った。\n「ただ、そこにあるキーは持っていっていい。\n　どうせ俺にはもう使い道がない。\n　地下鉄のどこかで役に立つはずだ」',
+        bad: false,
+      },
+    ],
+  },
 
   use_satellite_terminal: { type:'ending_check' },
 
