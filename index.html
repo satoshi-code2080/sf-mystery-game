@@ -743,6 +743,20 @@ const EV = {
   bad_ending_caught: { type:'ending', result:'bad',
     text:'――気がつくと、また白い天井を見ていた。\n「K-77の再捕獲を確認。\n 記憶消去プロトコルを再実行します」\n\n遠くなる意識の中で、あなたは思った。\nキラ――私の名前は、キラだった。',
     title:'― BAD ENDING ―', tag:'「記憶は、また消えた」' },
+
+  // ── 追加エンディング ──
+
+  true_ending: { type:'ending', result:'true',
+    text:'証拠データチップをスロットに挿入する。\nコード「47-ALPHA」を入力すると、端末が起動した。\n\nプログレスバーが進み始めた。\n10%……30%……\n\nそのとき、初めて躊躇した。\nこのデータを世界に晒せば、NEXUSは終わる。\nでも仲間たちは――今も、どこかで待っているのか？\n\n七つの記憶が、走馬灯のように蘇った。\n白衣の男の声。冷たい台の感触。\n「コードはNEMESISだ、忘れるな」という仲間の言葉。\nそして日記の最後の一行――\n「もし私の記憶が消えても、ここに書いた証拠は消えない」\n\nあなたは自分自身の言葉に、背中を押された。\n\n「SEND」\n\n90%……100%――「送信完了」\n\nNEXUSの全データが、世界中のサーバーに拡散された。\n記憶は今も戻らない。\nでもあなたは今、自分の名前を知っている。\nキラ。世界を変えようとした人間の名前を。\n\nあなたの選択は、間違っていなかった。',
+    title:'― TRUE ENDING ―', tag:'「記憶がなくとも、あなたは正しく戦った」' },
+
+  normal_ending: { type:'ending', result:'neutral',
+    text:'証拠チップはない。\nでも、今夜ここから逃げることはできる。\n\nあなたは屋上の縁に立った。\n眼下に広がる2087年の夜景。\n光の海の中に、NEXUSの監視塔が無数に光っている。\n\nこの都市は、今夜も見られている。\n一億人が、知らないうちに。\n\nそれでも、今夜は生き延びることを選んだ。\n記憶のないまま、証拠のないまま。\n\nあなたは都市の影へと消えた。\n名前も、過去も、使命も――すべてを胸に抱えたまま。\n\nNEXUSは今も動き続けている。\n真実は、まだ闇の中に眠っている。',
+    title:'― NORMAL ENDING ―', tag:'「逃げ続ける先に、何がある？」' },
+
+  secret_ending: { type:'ending', result:'secret',
+    text:'送信完了の瞬間、端末に最後のメッセージが表示された。\n\n「キラ・ナカムラ。\n　プロジェクトNEMESIS、最終フェーズ完了。\n　おめでとう。あなたの計画通りだ」\n\n手が、止まった。\n\n解読されたNEXUSの指令ファイルが、\nゆっくりと真実を語り始めた。\n\nK-77――それはあなたの実験番号ではなかった。\nあなたが、自分につけた番号だった。\n\nあなたはかつてNEXUSの首席研究員だった。\n記憶消去技術の発明者。監視システムの設計者。\n\nNEMESISは内部告発ではなかった。\n最初から、あなた自身が仕掛けた罠だった。\n\n「なぜ私は、自分の記憶を消したのか」\n\n日記の最後の言葉が頭に浮かぶ。\n「もし私の記憶が消えても、証拠は消えない」\n\nあなたは自分自身を信頼して、記憶を捨てた。\n捕まらないために。証拠を守るために。\n\n記憶のない自分が、最も安全な運び屋だった。',
+    title:'― SECRET ENDING ―', tag:'「真実は、あなた自身の中に閉じ込められていた」' },
 };
 
 // ═══════════════════════════════════════════
@@ -1081,33 +1095,61 @@ async function evStory(ev) {
 
 async function evEndCheck() {
   if (P.loc !== 'rooftop') { await tw('ここでは使えない。', 'warn'); return; }
-  if (!P.inv.includes('data_chip')) { await tw('端末のスロットが空だ。\n送信するデータが必要だ。', 'warn'); return; }
+
+  if (!P.inv.includes('data_chip')) {
+    // データチップなし → ノーマルエンディングの選択肢を提示
+    await tw('端末のスロットが空だ。送信するデータが必要だ。\n\n……このまま逃げることもできる。', 'warn');
+    await sleep(300);
+    const c = await showBtns([
+      { label: '引き返して証拠チップを探す' },
+      { label: 'データを諦め、ここから脱出する', danger: true },
+    ]);
+    clearBtns();
+    if (c === 1) { await sleep(300); await runEv('normal_ending'); }
+    return;
+  }
+
   await sleep(300);
-  await runEv('good_ending');
+
+  // エンディング優先順位: シークレット > トゥルー > グッド
+  const hasSecret = P.flags.has('decoded_nexus_order') && P.flags.has('knows_motivation');
+  const hasTrue   = P.memCount === 7;
+
+  if (hasSecret)     await runEv('secret_ending');
+  else if (hasTrue)  await runEv('true_ending');
+  else               await runEv('good_ending');
 }
 
 async function evEnding(ev) {
   P.over = true;
   clearBtns();
 
+  // エンディング種別ごとの色・背景・速度
+  const ENDING_STYLE = {
+    good:    { bg:'#030e06', col:'var(--green)',  spd:28 },
+    true:    { bg:'#0e0a02', col:'#f0c040',       spd:26 },
+    neutral: { bg:'#050a12', col:'#8ab4cc',       spd:32 },
+    secret:  { bg:'#08041a', col:'#b878ff',       spd:30 },
+    bad:     { bg:'#0e0306', col:'#ff3355',       spd:38 },
+  };
+  const style = ENDING_STYLE[ev.result] || ENDING_STYLE.good;
+
   const scr = $('end-screen');
   const txt = $('end-text');
-  const isGood = ev.result === 'good';
-  scr.style.background = isGood ? '#030e06' : '#0e0306';
-  const col = isGood ? 'var(--green)' : '#ff3355';
+  scr.style.background = style.bg;
   txt.innerHTML = '';
-  txt.style.color = col;
+  txt.style.color = style.col;
   scr.style.display = 'flex';
 
   for (const ch of ev.text) {
     if (ch === '\n') txt.appendChild(document.createElement('br'));
     else txt.insertAdjacentText('beforeend', ch);
-    await sleep(isGood ? 28 : 38);
+    await sleep(style.spd);
   }
 
   await sleep(700);
   const t = document.createElement('div');
-  t.style.cssText = `font-size:20px;margin-top:22px;letter-spacing:.3em;text-shadow:0 0 18px ${col};`;
+  t.style.cssText = `font-size:20px;margin-top:22px;letter-spacing:.3em;text-shadow:0 0 18px ${style.col};`;
   t.textContent = ev.title;
   txt.appendChild(t);
 
