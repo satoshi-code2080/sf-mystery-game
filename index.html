@@ -461,7 +461,7 @@ body {
 <div id="game-screen">
   <div id="hud">
     <span id="loc-name">―</span>
-    <span id="mem-count">記憶: 0 / 5</span>
+    <span id="mem-count">記憶: 0 / 7</span>
   </div>
   <div id="main-area">
     <div id="output-wrap"><div id="output"></div></div>
@@ -510,7 +510,7 @@ const LOC = {
     fv:   '目が覚める。\n全身が重い。頭の中は空っぽだ。\n名前も、顔も、過去も――何も思い出せない。\nただ一つだけ確かなことがある。ここから出なければならない。',
     conn: { north: 'dark_alley' },
     lock: {},
-    items: ['wristband','syringe'],
+    items: ['wristband','syringe','kira_diary'],
     events: [],
   },
   dark_alley: {
@@ -555,7 +555,7 @@ const LOC = {
     fv:   '扉の隙間から青白い光が漏れていた。\n中に入ると――モニター越しに、こちらを見ている目が一つ。\n「……お前がK-77か」\n低い声が、暗闇から響いた。',
     conn: { south:'dark_alley' },
     lock: {},
-    items: ['terminal_key'],
+    items: ['terminal_key','crypto_tool','fake_id'],
     events: ['hacker_encounter'],
   },
   surveillance_center: {
@@ -578,6 +578,9 @@ const ITEM = {
   recorder:   { name:'記録装置',         desc:'手のひらサイズの録音・録画デバイス。外装は傷だらけ。\n再生ボタンを押すと、かすかに音声が流れ始める。\n「……NEXUSによる市民監視データは既に1億件を超えた。\n　政府はこれを知っている。いや――命令したのは政府だ……」\nノイズの後、音声は途切れた。', pt:'記録装置を回収した。', fixed:false, usable:false, ie:'memory_4', ue:null },
   data_chip:  { name:'証拠データチップ', desc:'爪ほどの大きさの記録チップ。\n――これを見た瞬間、確信した。\nこのチップにすべてが入っている。\nNEXUSの監視網、政府との秘密契約書、1億人分の個人データ。\nあなたが命を懸けて隠した、最後の証拠だ。', pt:'証拠データチップを手に取った。手が震える。', fixed:false, usable:false, ie:'memory_5', ue:null },
   satellite_terminal: { name:'衛星通信端末', desc:'改造された衛星通信端末。通常の検閲回線を迂回し、\n直接グローバルネットワークにデータを送信できる。\nチップスロットが一つ、青く光っている。', pt:null, fixed:true, usable:true, ie:null, ue:'use_satellite_terminal' },
+  kira_diary:   { name:'キラの日記',         desc:'ベッドの下に隠されていた薄い手帳。表紙に「キラ」と書かれている。\n所々、破られたり塗りつぶされたりしているが、最後のページだけが読める。\n「もし私の記憶が消えても、ここに書いた証拠は消えない」', pt:'日記を手に取った。古い紙の匂いがした。', fixed:false, usable:false, ie:'memory_7', ue:null },
+  crypto_tool:  { name:'暗号解読ツール',     desc:'ハッカーが改造した携帯型の暗号解析デバイス。\n高度な暗号化でロックされたデータも、これがあれば解読できる。\n操作ボタンを押すと、以前使われた痕跡が残っているのが分かった。', pt:'暗号解読ツールを手に入れた。', fixed:false, usable:true, ie:'memory_6', ue:'use_crypto_tool' },
+  fake_id:      { name:'偽造IDカード',       desc:'本物そっくりに精巧に作られた偽造IDカード。\n写真欄には見覚えのない顔。だが名前欄には「K-77 / 全域通行証」と記されている。\nうまく使えば、どこにでも潜入できるかもしれない。', pt:'偽造IDカードを受け取った。', fixed:false, usable:true, ie:null, ue:'use_fake_id' },
   terminal_key: { name:'端末アクセスキー', desc:'小型の暗号化アクセスキーデバイス。表面に「SC-7C ACCESS」と刻まれている。\n地下鉄駅のどこかのパネルに差せば、何かが開くかもしれない。', pt:'端末アクセスキーを受け取った。', fixed:false, usable:true, ie:null, ue:'use_terminal_key' },
   security_log: { name:'監視ログファイル', desc:'解析端末からダウンロードした監視ログ。\nスクロールすると「K-77」のコードネームが何度も登場する。\n最新エントリ――「K-77、記憶消去後の覚醒を確認。\n　証拠チップの所在は不明。監視継続」\nNEXUSは、まだチップの場所を知らない。', pt:'監視ログファイルを入手した。', fixed:false, usable:false, ie:'inspect_security_log', ue:null },
 };
@@ -588,6 +591,8 @@ const EV = {
   memory_3: { type:'memory', frag:'暗い部屋で、誰かと話している。\n「コードは NEMESIS だ。忘れるな」\n「衛星端末さえ見つければ、すべてを送信できる」\n仲間がいた。あなたには、仲間がいた。', flag:'knows_code', sum:'記憶の断片③：コードは NEMESIS、衛星端末が鍵' },
   memory_4: { type:'memory', frag:'モニターの前で、膨大なデータを見ている。\n「NEXUS。これが組織の名前だ」\n「彼らは市民全員を監視している。政府の命令で」\n怒りと恐怖が混ざり合った感情が、記憶と共に蘇る。', flag:'knows_org', sum:'記憶の断片④：組織の名前はNEXUS、政府と繋がっている' },
   memory_5: { type:'memory', frag:'あなたは一人で廃工場に忍び込んでいた。\n手に、小さなチップを持って。\n「ここなら見つからない。屋上の端末が見つかれば――」\nすべてが繋がった。このチップが、世界を変える。', flag:'knows_truth', sum:'記憶の断片⑤：あなたがチップをここに隠した' },
+  memory_6: { type:'memory', frag:'暗号解読ツールの操作を始めた瞬間、手が自然に動いた。\n使い方を知っている。以前、何度も使ったことがある。\n――そうだ。あなたはNEXUSのシステムエンジニアだった。\n内部から不正を暴くために、証拠を集め続けていた。', flag:'knows_background', sum:'記憶の断片⑥：あなたはNEXUSの内部エンジニアだった' },
+  memory_7: { type:'memory', frag:'日記の文字を見た瞬間、声が聞こえた気がした。\n「キラ、世界を変えよう」――仲間の声。\n「監視されている人たちを、助けたい」――自分の声。\nあなたはただのエンジニアじゃなかった。\n守りたい人たちのために、戦っていた。', flag:'knows_motivation', sum:'記憶の断片⑦：あなたが戦った理由' },
 
   agent_encounter: {
     type: 'encounter', doneFlag: 'agent_encountered',
@@ -603,8 +608,10 @@ const EV = {
   use_ic_card:      { type:'story', reqFlag:null, noFlagText:null, reqLoc:'subway_station', noLocText:'ここでICカードを使う場所がない。', text:'ICカードを通路の認証スキャナーにかざす。\nピッ――「区画7-C 全域通行許可 / 承認」\n地下への扉がゆっくりと開いた。', unlockFlag:'factory_unlocked', sum:'地下通路への扉が開いた' },
 
   use_terminal_key: { type:'story', reqFlag:null, noFlagText:null, reqLoc:'subway_station', noLocText:'このキーを使える場所がここには見当たらない。', text:'改札脇の隠しパネルにアクセスキーを差し込む。\nシステムが起動し、「SC-7C 監視センター / 解錠承認」と表示された。\n壁の一部がスライドし、暗い通路が現れた。', unlockFlag:'surveillance_unlocked', sum:'監視センターへの通路が開いた' },
+  use_fake_id:      { type:'story', reqFlag:null, noFlagText:null, reqLoc:'subway_station', noLocText:'ここでIDカードを使える認証装置が見当たらない。', text:'偽造IDカードを改札脇のスキャナーにかざす。\n一瞬の間があり――「通行許可。全域アクセス承認」\nシステムは偽造を見抜けなかった。\n壁の一部がスライドし、暗い通路が現れた。', unlockFlag:'surveillance_unlocked', sum:'偽造IDカードで監視センターへの通路が開いた' },
+  use_crypto_tool:  { type:'story', reqFlag:null, noFlagText:null, reqLoc:'surveillance_center', noLocText:'このツールで解析できるデータが、ここには見当たらない。', text:'解読ツールを解析端末に接続する。\n暗号化されたNEXUSの指令データが次々と解読されていく。\n「K-77の内部告発を確認。記憶消去実施。\n　しかし証拠チップの回収には失敗。\n　K-77の協力者リスト: …（データ欠損）」\n――あなたには仲間がいた。今もどこかで待っているかもしれない。', unlockFlag:'decoded_nexus_order', sum:'暗号データ解読：仲間がまだどこかにいるかもしれない' },
 
-  inspect_security_log: { type:'story', reqFlag:null, noFlagText:null, reqLoc:null, noLocText:null, text:'ログを読み進めると、全貌が見えてくる。\nNEXUSはあなたの全行動を把握していた。しかし――。\n「K-77、証拠チップの所在は依然不明。\n　記憶消去による情報封鎖は有効と判断。監視継続」\n彼らはチップの隠し場所を知らない。\nあなたが命がけで隠したから。まだ、間に合う。', unlockFlag:'knows_nexus_blind', sum:'監視ログ解析：NEXUSはまだチップの場所を知らない' },
+  inspect_security_log: { type:'story', flag:'knows_nexus_blind', reqFlag:null, noFlagText:null, reqLoc:null, noLocText:null, text:'ログを読み進めると、全貌が見えてくる。\nNEXUSはあなたの全行動を把握していた。しかし――。\n「K-77、証拠チップの所在は依然不明。\n　記憶消去による情報封鎖は有効と判断。監視継続」\n彼らはチップの隠し場所を知らない。\nあなたが命がけで隠したから。まだ、間に合う。', unlockFlag:'knows_nexus_blind', sum:'監視ログ解析：NEXUSはまだチップの場所を知らない' },
 
   hacker_encounter: {
     type: 'encounter', doneFlag: 'hacker_encountered',
@@ -693,7 +700,7 @@ function sep() { fast('───────────────────
 
 function hud() {
   $('loc-name').textContent = '■ ' + LOC[P.loc].name;
-  $('mem-count').textContent = `記憶: ${P.memCount} / 5`;
+  $('mem-count').textContent = `記憶: ${P.memCount} / 7`;
 }
 
 function refreshInv() {
@@ -705,7 +712,7 @@ function refreshInv() {
   }
   const dots = $('dots');
   dots.innerHTML = '';
-  for (let i = 0; i < 5; i++) {
+  for (let i = 0; i < 7; i++) {
     const d = document.createElement('span');
     d.className = 'dot' + (i < P.memCount ? ' on' : '');
     dots.appendChild(d);
@@ -908,7 +915,7 @@ async function doInv() {
   } else {
     await tw('[ 所持アイテム ]\n' + P.inv.map(id => '・' + ITEM[id].name).join('\n'), 'event');
   }
-  await tw('記憶の断片: ' + P.memCount + ' / 5' + (P.memCount === 5 ? '  ★ すべて回収済み' : ''), 'mem');
+  await tw('記憶の断片: ' + P.memCount + ' / 7' + (P.memCount === 7 ? '  ★ すべて回収済み' : ''), 'mem');
 }
 
 async function doLook() { await showLoc(false); }
@@ -932,7 +939,7 @@ async function evMemory(ev) {
   P.memCount++;
   hud(); refreshInv();
   await tw('✦ ' + ev.sum, 'mem');
-  if (P.memCount === 5) { await sleep(200); await tw('★ すべての記憶が戻った。真実が見えてきた。', 'mem'); }
+  if (P.memCount === 7) { await sleep(200); await tw('★ すべての記憶が戻った。真実が見えてきた。', 'mem'); }
 }
 
 async function evEncounter(ev) {
