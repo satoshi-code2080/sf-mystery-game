@@ -319,9 +319,21 @@ body {
   #inv-empty { font-size: 12px; color: var(--dim); }
   .gbtn { font-size: 12px; padding: 6px 10px; }
 }
+/* ── STARS ── */
+#stars-canvas {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+#title-screen, #game-screen, #mem-overlay, #end-screen {
+  position: relative;
+  z-index: 1;
+}
 </style>
 </head>
 <body>
+<canvas id="stars-canvas"></canvas>
 
 <!-- タイトル -->
 <div id="title-screen">
@@ -837,6 +849,71 @@ async function evEnding(ev) {
   tag.textContent = ev.tag;
   txt.appendChild(tag);
 }
+
+// ═══════════════════════════════════════════
+// 星のアニメーション
+// ═══════════════════════════════════════════
+
+(function () {
+  const canvas = $('stars-canvas');
+  const ctx = canvas.getContext('2d');
+  const COUNT = 75;
+  let stars = [];
+
+  function resize() {
+    canvas.width  = window.innerWidth;
+    canvas.height = window.innerHeight;
+  }
+
+  function randBetween(a, b) { return a + Math.random() * (b - a); }
+
+  function createStar() {
+    return {
+      x:      randBetween(0, canvas.width),
+      y:      randBetween(0, canvas.height),
+      r:      randBetween(0.4, 1.6),
+      speed:  randBetween(0.15, 0.55),
+      opacity:randBetween(0.2, 0.75),
+      // 微妙に左右へ揺れる量
+      drift:  randBetween(-0.08, 0.08),
+    };
+  }
+
+  function initStars() {
+    stars = Array.from({ length: COUNT }, createStar);
+  }
+
+  function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    for (const s of stars) {
+      // 上方向へ移動
+      s.y -= s.speed;
+      s.x += s.drift;
+
+      // 画面上端を超えたら下からリスポーン
+      if (s.y + s.r < 0) {
+        s.y = canvas.height + s.r;
+        s.x = randBetween(0, canvas.width);
+      }
+
+      // グロウ付き描画
+      ctx.beginPath();
+      ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+      ctx.shadowBlur  = s.r * 4;
+      ctx.shadowColor = `rgba(180, 230, 255, ${s.opacity * 0.6})`;
+      ctx.fillStyle   = `rgba(200, 235, 255, ${s.opacity})`;
+      ctx.fill();
+    }
+
+    requestAnimationFrame(draw);
+  }
+
+  window.addEventListener('resize', () => { resize(); initStars(); });
+  resize();
+  initStars();
+  draw();
+})();
 
 // ═══════════════════════════════════════════
 // 起動
