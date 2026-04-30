@@ -968,23 +968,32 @@ function _getAC() {
 }
 
 // ── 環境音（ループ） ──
-// 穏やかな宇宙パッド: A3-E4 完全5度 + 上位倍音 (sine のみ)
-// 20秒周期のトレモロで"宇宙の呼吸"を表現。低域を抑え軽やかさを優先。
+//
+// 設計方針:
+//   ・E メジャーコード (E4, G#4, B4, E5, B5) を使用
+//   ・最低音を E4=330Hz に設定 → 低域ドローン感ゼロ
+//   ・長3度 (G#4) を核心に置くことで「不気味でない暖かさ」を確保
+//   ・3.5秒かけてゆっくりフェードイン（映画的な立ち上がり）
+//   ・LFO 2本を異なる周期で動かし有機的な揺らぎを生む
+//
+// 参考イメージ: インターステラーのオルガンパッド、ゼルダの幻想的な空間音
 function startAmbient() {
   if (_ambient) return;
-  const ac = _getAC();
+  const ac  = _getAC();
+  const now = ac.currentTime;
 
   const master = ac.createGain();
-  master.gain.value = 0.055;
+  master.gain.setValueAtTime(0, now);
+  master.gain.linearRampToValueAtTime(0.055, now + 3.5); // ゆっくりフェードイン
   master.connect(ac.destination);
 
-  // A3-E4 完全5度を軸に、上へ向かって音を積む
+  // E メジャーコード（低域なし・長3度で明るさを確保）
   [
-    [220.00, 0.22], // A3  – やさしい土台
-    [329.63, 0.18], // E4  – 完全5度（開放的・明るい）
-    [440.00, 0.11], // A4  – オクターブ
-    [659.25, 0.05], // E5  – 高域の輝き
-    [880.00, 0.02], // A5  – 遠い星のきらめき
+    [329.63, 0.26], // E4  – 基音（最低音 330Hz、低域ドローン感なし）
+    [415.30, 0.22], // G#4 – 長3度（明るさ・温かさの核心）
+    [493.88, 0.16], // B4  – 完全5度（開放感）
+    [659.25, 0.09], // E5  – オクターブ上（輝き）
+    [987.77, 0.03], // B5  – 高域のきらめき（星の光）
   ].forEach(([f, vol]) => {
     const osc = ac.createOscillator();
     const g   = ac.createGain();
@@ -993,18 +1002,21 @@ function startAmbient() {
     g.gain.value = vol;
     osc.connect(g);
     g.connect(master);
-    osc.start();
+    osc.start(now);
   });
 
-  // 20秒周期の超ゆっくりトレモロ
-  const lfo  = ac.createOscillator();
-  const lfoG = ac.createGain();
-  lfo.type = 'sine';
-  lfo.frequency.value = 0.05;
-  lfoG.gain.value = 0.013;
-  lfo.connect(lfoG);
-  lfoG.connect(master.gain);
-  lfo.start();
+  // LFO 2本で「宇宙空間を漂う」有機的な揺らぎを作る
+  // 周期が互いに素なので同じパターンが繰り返さず自然な変化になる
+  [[0.04, 0.011], [0.07, 0.007]].forEach(([rate, depth]) => {
+    const lfo  = ac.createOscillator();
+    const lfoG = ac.createGain();
+    lfo.type = 'sine';
+    lfo.frequency.value = rate;
+    lfoG.gain.value = depth;
+    lfo.connect(lfoG);
+    lfoG.connect(master.gain);
+    lfo.start(now);
+  });
 
   _ambient = true;
 }
