@@ -428,6 +428,89 @@ body {
   }
 }
 
+/* ── HINT SYSTEM ── */
+#hud-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+#hint-btn {
+  font-family: var(--font);
+  font-size: 11px;
+  letter-spacing: .06em;
+  color: rgba(0,212,255,.6);
+  background: transparent;
+  border: 1px solid rgba(0,212,255,.25);
+  padding: 3px 8px;
+  cursor: pointer;
+  transition: all .15s;
+  white-space: nowrap;
+  -webkit-tap-highlight-color: transparent;
+}
+#hint-btn:hover, #hint-btn:active {
+  color: var(--cyan);
+  border-color: var(--cyan);
+  box-shadow: 0 0 6px rgba(0,212,255,.25);
+}
+#hint-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.88);
+  z-index: 110;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+#hint-box {
+  max-width: 460px;
+  width: 100%;
+  max-height: 80vh;
+  overflow-y: auto;
+  border: 1px solid var(--cyan);
+  box-shadow: 0 0 20px rgba(0,212,255,.2), 0 0 40px rgba(0,212,255,.08);
+  background: #040d1a;
+  padding: 18px 20px;
+  -webkit-overflow-scrolling: touch;
+}
+.hint-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid rgba(0,212,255,.2);
+  padding-bottom: 9px;
+  margin-bottom: 13px;
+}
+.hint-title { color: var(--cyan); font-size: 11px; letter-spacing: .3em; }
+#hint-level-ind { font-size: 11px; color: var(--dim); }
+#hint-text {
+  color: var(--text);
+  line-height: 1.9;
+  min-height: 48px;
+  margin-bottom: 16px;
+  font-size: 14px;
+}
+.hint-actions { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; }
+#hint-more-btn {
+  font-family: var(--font); font-size: 12px;
+  padding: 6px 13px;
+  background: transparent;
+  border: 1px solid var(--cyan); color: var(--cyan);
+  cursor: pointer; transition: all .15s; letter-spacing: .04em;
+}
+#hint-more-btn:hover:not([disabled]), #hint-more-btn:active:not([disabled]) {
+  background: rgba(0,212,255,.07);
+}
+#hint-more-btn[disabled] { opacity: .35; cursor: default; }
+#hint-close-btn {
+  font-family: var(--font); font-size: 12px;
+  padding: 6px 13px;
+  background: transparent;
+  border: 1px solid rgba(255,255,255,.13); color: var(--dim);
+  cursor: pointer; transition: all .15s;
+}
+#hint-close-btn:hover, #hint-close-btn:active { border-color: var(--orange); color: var(--orange); }
+
 /* ── STARS ── */
 #stars-canvas {
   position: fixed;
@@ -461,7 +544,10 @@ body {
 <div id="game-screen">
   <div id="hud">
     <span id="loc-name">―</span>
-    <span id="mem-count">記憶: 0 / 7</span>
+    <div id="hud-right">
+      <button id="hint-btn" onclick="showHint()">? ヒント</button>
+      <span id="mem-count">記憶: 0 / 7</span>
+    </div>
   </div>
   <div id="main-area">
     <div id="output-wrap"><div id="output"></div></div>
@@ -492,6 +578,21 @@ body {
 <div id="end-screen">
   <div id="end-text"></div>
   <button id="retry-btn" onclick="location.reload()">↺ もう一度プレイする</button>
+</div>
+
+<!-- ヒント -->
+<div id="hint-overlay">
+  <div id="hint-box">
+    <div class="hint-header">
+      <span class="hint-title">[ HINT ]</span>
+      <span id="hint-level-ind">1 / 3</span>
+    </div>
+    <div id="hint-text"></div>
+    <div class="hint-actions">
+      <button id="hint-more-btn" onclick="nextHint()">さらに詳しく ▶</button>
+      <button id="hint-close-btn" onclick="closeHint()">閉じる</button>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -1170,6 +1271,113 @@ function playMemory() {
     o.connect(g); g.connect(master);
     o.start(t); o.stop(t + 2.5);
   });
+}
+
+// ═══════════════════════════════════════════
+// ヒントシステム
+// ═══════════════════════════════════════════
+
+const HINT_DATA = {
+  explore_alley: [
+    "まだ探索できていない場所があるようだ。周囲を見回してみよう。",
+    "廃病院のそばに出口があるはずだ。別の方向を試してみよう。",
+    "廃病院から北へ進むと「薄暗い路地」に出られる。",
+  ],
+  find_ic_card: [
+    "地下への道は閉ざされているが、鍵になるものはすでに近くにあるはずだ。",
+    "誰かが通行証を路地に落としていったようだ。",
+    "「薄暗い路地」を探すとICカードが落ちている。",
+  ],
+  use_ic_card: [
+    "持っているカードに使い道がありそうだ。",
+    "地下鉄の改札付近でカードが役立つかもしれない。",
+    "「地下鉄駅」でインベントリのICカードを「使う」と地下への扉が開く。",
+  ],
+  find_data_chip: [
+    "工場の地下室に重要なものが隠されているはずだ。",
+    "地下室をすみずみまで調べてみよう。見落としたアイテムがあるようだ。",
+    "「廃工場の地下室」で証拠データチップを拾い、調べてみよう。",
+  ],
+  find_memo: [
+    "使い捨て端末のパスワードを解くための手がかりがどこかにある。",
+    "路地に落ちていた紙切れが重要かもしれない。",
+    "「薄暗い路地」で暗号メモを拾い、調べてみよう。",
+  ],
+  read_memo: [
+    "すでに見つけたメモに、まだ気づいていない情報があるようだ。",
+    "インベントリにあるメモをじっくり調べてみよう。",
+    "インベントリの「暗号メモ」を「調べる」とパスワードが分かる。",
+  ],
+  find_burner_phone: [
+    "パスワードを入力できる機器がどこかにあるはずだ。",
+    "路地にまだ拾っていないものが残っているようだ。",
+    "「薄暗い路地」で使い捨て端末を拾おう。",
+  ],
+  use_burner_phone: [
+    "手元にある端末にまだ使い道がありそうだ。",
+    "端末のパスワードを入力すれば何か情報が得られるかもしれない。",
+    "インベントリの「使い捨て端末」を「使う」と屋上へのコードが手に入る。",
+  ],
+  go_to_rooftop: [
+    "必要なものはすでに揃っているようだ。",
+    "証拠チップを送信できる装置がどこかにあるはずだ。",
+    "「高層ビルの屋上」で衛星通信端末を「使う」とエンディングへ進める。",
+  ],
+};
+
+let _hintKey   = null;
+let _hintLevel = 0;
+
+function getHintKey() {
+  const inv   = P.inv;
+  const flags = P.flags;
+
+  // メインクエスト進行度を判定
+  if (!inv.includes('data_chip')) {
+    if (!flags.has('factory_unlocked')) {
+      if (!inv.includes('ic_card')) {
+        return P.visited.has('dark_alley') ? 'find_ic_card' : 'explore_alley';
+      }
+      return 'use_ic_card';
+    }
+    return 'find_data_chip';
+  }
+
+  if (!flags.has('rooftop_unlocked')) {
+    if (!flags.has('knows_code')) {
+      return inv.includes('memo') ? 'read_memo' : 'find_memo';
+    }
+    return inv.includes('burner_phone') ? 'use_burner_phone' : 'find_burner_phone';
+  }
+
+  return 'go_to_rooftop';
+}
+
+function _renderHint() {
+  const hints = HINT_DATA[_hintKey] || ['現在のヒントはありません。'];
+  const total = hints.length;
+  $('hint-text').textContent = hints[_hintLevel];
+  $('hint-level-ind').textContent = `${_hintLevel + 1} / ${total}`;
+  const moreBtn = $('hint-more-btn');
+  const maxed   = _hintLevel >= total - 1;
+  moreBtn.disabled    = maxed;
+  moreBtn.textContent = maxed ? 'これ以上のヒントはない' : 'さらに詳しく ▶';
+}
+
+function showHint() {
+  const key = getHintKey();
+  if (key !== _hintKey) { _hintKey = key; _hintLevel = 0; }
+  _renderHint();
+  $('hint-overlay').style.display = 'flex';
+}
+
+function nextHint() {
+  const hints = HINT_DATA[_hintKey] || [];
+  if (_hintLevel < hints.length - 1) { _hintLevel++; _renderHint(); }
+}
+
+function closeHint() {
+  $('hint-overlay').style.display = 'none';
 }
 
 // ═══════════════════════════════════════════
