@@ -504,6 +504,41 @@ body {
   font-family: var(--font);
 }
 
+/* ── DIFFICULTY & TIMER ── */
+.t-diff {
+  display: flex;
+  gap: 10px;
+  margin-top: 8px;
+}
+.diff-btn {
+  padding: 9px 18px;
+  font-family: var(--font); font-size: 13px; letter-spacing: .18em;
+  background: transparent; cursor: pointer;
+  transition: all .2s; -webkit-tap-highlight-color: transparent;
+  border: 1px solid rgba(0,212,255,.3); color: rgba(0,212,255,.65);
+}
+.diff-btn:hover:not(:active), .diff-btn:active {
+  background: rgba(0,212,255,.09); color: var(--cyan);
+  border-color: var(--cyan); box-shadow: 0 0 10px rgba(0,212,255,.28);
+}
+.diff-easy  { border-color: rgba(0,255,159,.3);  color: rgba(0,255,159,.65); }
+.diff-easy:hover:not(:active), .diff-easy:active {
+  background: rgba(0,255,159,.08); color: var(--green);
+  border-color: var(--green); box-shadow: 0 0 10px rgba(0,255,159,.25);
+}
+.diff-hard  { border-color: rgba(255,107,53,.3); color: rgba(255,107,53,.65); }
+.diff-hard:hover:not(:active), .diff-hard:active {
+  background: rgba(255,107,53,.08); color: var(--orange);
+  border-color: var(--orange); box-shadow: 0 0 10px rgba(255,107,53,.25);
+}
+/* 難易度・タイマー（インベントリ内） */
+.inv-sub { margin-top: 10px; }
+.inv-sub-val { font-size: 12px; margin-top: 2px; }
+.inv-sub-val.easy   { color: var(--green); }
+.inv-sub-val.normal { color: var(--cyan); }
+.inv-sub-val.hard   { color: var(--orange); }
+#play-time { color: var(--text); }
+
 /* ── HINT SYSTEM ── */
 #hud-right {
   display: flex;
@@ -613,7 +648,12 @@ body {
   <div class="t-main" data-text="記憶なき告発者">記憶なき告発者</div>
   <div class="t-sub">～ NEMESIS : 2087 ～</div>
   <div class="t-year">西暦2087年。あなたは目覚めた。</div>
-  <button id="start-btn" onclick="startGame()">▶ ゲームを始める</button>
+  <div class="t-diff-label" style="font-size:11px;letter-spacing:.2em;color:var(--dim);margin-top:28px;margin-bottom:6px;">難易度を選択してください</div>
+  <div class="t-diff">
+    <button class="diff-btn diff-easy"  onclick="startGame('easy')">EASY</button>
+    <button class="diff-btn"            onclick="startGame('normal')">NORMAL</button>
+    <button class="diff-btn diff-hard"  onclick="startGame('hard')">HARD</button>
+  </div>
   <span class="t-version">ver 1.0.0</span>
 </div>
 
@@ -639,6 +679,14 @@ body {
       <div>
         <div class="p-title" style="margin-top:12px">MEMORY</div>
         <div id="dots"></div>
+      </div>
+      <div class="inv-sub">
+        <div class="p-title">DIFFICULTY</div>
+        <div id="diff-val" class="inv-sub-val normal">NORMAL</div>
+      </div>
+      <div class="inv-sub">
+        <div class="p-title">TIME</div>
+        <span id="play-time" class="inv-sub-val">00:00</span>
       </div>
     </div>
   </div>
@@ -1102,7 +1150,9 @@ async function doInspect() {
   if (c >= all.length) return;
 
   const id = all[c];
-  await tw(ITEM[id].desc, 'desc');
+  // ハードモードはアイテム説明を1行目のみ表示
+  const desc = (_difficulty === 'hard') ? ITEM[id].desc.split('\n')[0] : ITEM[id].desc;
+  await tw(desc, 'desc');
 
   if (ITEM[id].ie) {
     const ev = EV[ITEM[id].ie];
@@ -1227,6 +1277,7 @@ async function evEndCheck() {
 
 async function evEnding(ev) {
   P.over = true;
+  pauseTimer();
   checkEndingAch(ev.result);
   clearBtns();
 
@@ -1264,6 +1315,13 @@ async function evEnding(ev) {
   tag.style.cssText = 'font-size:14px;margin-top:10px;color:var(--dim);';
   tag.textContent = ev.tag;
   txt.appendChild(tag);
+
+  // プレイ時間を表示
+  await sleep(300);
+  const timeEl = document.createElement('div');
+  timeEl.style.cssText = 'font-size:12px;margin-top:12px;letter-spacing:.12em;color:rgba(255,255,255,.3);';
+  timeEl.textContent   = 'PLAY TIME: ' + _fmtTime(_getElapsed());
+  txt.appendChild(timeEl);
 }
 
 // ═══════════════════════════════════════════
@@ -1425,51 +1483,61 @@ function playMemory() {
 // ヒントシステム
 // ═══════════════════════════════════════════
 
+// 第4要素はイージーモード専用（ノーマル以上では表示されない）
 const HINT_DATA = {
   explore_alley: [
     "まだ探索できていない場所があるようだ。周囲を見回してみよう。",
     "廃病院のそばに出口があるはずだ。別の方向を試してみよう。",
     "廃病院から北へ進むと「薄暗い路地」に出られる。",
+    "「移動する」→「北」を選ぶと「薄暗い路地」に移動できる。",
   ],
   find_ic_card: [
     "地下への道は閉ざされているが、鍵になるものはすでに近くにあるはずだ。",
     "誰かが通行証を路地に落としていったようだ。",
     "「薄暗い路地」を探すとICカードが落ちている。",
+    "「薄暗い路地」で「アイテムを拾う」→「ICカード」を取ろう。",
   ],
   use_ic_card: [
     "持っているカードに使い道がありそうだ。",
     "地下鉄の改札付近でカードが役立つかもしれない。",
     "「地下鉄駅」でインベントリのICカードを「使う」と地下への扉が開く。",
+    "「地下鉄駅」→「アイテムを使う」→「ICカード」を選ぶ。",
   ],
   find_data_chip: [
     "工場の地下室に重要なものが隠されているはずだ。",
     "地下室をすみずみまで調べてみよう。見落としたアイテムがあるようだ。",
     "「廃工場の地下室」で証拠データチップを拾い、調べてみよう。",
+    "「廃工場の地下室」→「アイテムを拾う」→「証拠データチップ」→「アイテムを調べる」。",
   ],
   find_memo: [
     "使い捨て端末のパスワードを解くための手がかりがどこかにある。",
     "路地に落ちていた紙切れが重要かもしれない。",
     "「薄暗い路地」で暗号メモを拾い、調べてみよう。",
+    "「薄暗い路地」→「アイテムを拾う」→「暗号メモ」→「アイテムを調べる」。",
   ],
   read_memo: [
     "すでに見つけたメモに、まだ気づいていない情報があるようだ。",
     "インベントリにあるメモをじっくり調べてみよう。",
     "インベントリの「暗号メモ」を「調べる」とパスワードが分かる。",
+    "「アイテムを調べる」→「暗号メモ」を選ぶ。キーワード「NEMESIS」が判明する。",
   ],
   find_burner_phone: [
     "パスワードを入力できる機器がどこかにあるはずだ。",
     "路地にまだ拾っていないものが残っているようだ。",
     "「薄暗い路地」で使い捨て端末を拾おう。",
+    "「薄暗い路地」→「アイテムを拾う」→「使い捨て端末」を取ろう。",
   ],
   use_burner_phone: [
     "手元にある端末にまだ使い道がありそうだ。",
     "端末のパスワードを入力すれば何か情報が得られるかもしれない。",
     "インベントリの「使い捨て端末」を「使う」と屋上へのコードが手に入る。",
+    "「アイテムを使う」→「使い捨て端末」。パスワードは暗号メモのキーワード。",
   ],
   go_to_rooftop: [
     "必要なものはすでに揃っているようだ。",
     "証拠チップを送信できる装置がどこかにあるはずだ。",
     "「高層ビルの屋上」で衛星通信端末を「使う」とエンディングへ進める。",
+    "「廃工場の地下室」→上方向に「移動する」→「アイテムを使う」→「衛星通信端末」。",
   ],
 };
 
@@ -1502,17 +1570,20 @@ function getHintKey() {
 }
 
 function _renderHint() {
-  const hints = HINT_DATA[_hintKey] || ['現在のヒントはありません。'];
-  const total = hints.length;
-  $('hint-text').textContent = hints[_hintLevel];
+  const hints  = HINT_DATA[_hintKey] || ['現在のヒントはありません。'];
+  // イージー：全4レベル利用可  ノーマル：最大3レベル（インデックス0-2）
+  const maxIdx = (_difficulty === 'easy') ? hints.length - 1 : Math.min(2, hints.length - 1);
+  const total  = maxIdx + 1;
+  $('hint-text').textContent      = hints[_hintLevel] || hints[hints.length - 1];
   $('hint-level-ind').textContent = `${_hintLevel + 1} / ${total}`;
   const moreBtn = $('hint-more-btn');
-  const maxed   = _hintLevel >= total - 1;
+  const maxed   = _hintLevel >= maxIdx;
   moreBtn.disabled    = maxed;
   moreBtn.textContent = maxed ? 'これ以上のヒントはない' : 'さらに詳しく ▶';
 }
 
 function showHint() {
+  if (_difficulty === 'hard') { _showMsg('ハードモードではヒントを使用できません'); return; }
   const key = getHintKey();
   if (key !== _hintKey) { _hintKey = key; _hintLevel = 0; }
   _renderHint();
@@ -1520,12 +1591,59 @@ function showHint() {
 }
 
 function nextHint() {
-  const hints = HINT_DATA[_hintKey] || [];
-  if (_hintLevel < hints.length - 1) { _hintLevel++; _renderHint(); }
+  const hints  = HINT_DATA[_hintKey] || [];
+  const maxIdx = (_difficulty === 'easy') ? hints.length - 1 : Math.min(2, hints.length - 1);
+  if (_hintLevel < maxIdx) { _hintLevel++; _renderHint(); }
 }
 
 function closeHint() {
   $('hint-overlay').style.display = 'none';
+}
+
+// ═══════════════════════════════════════════
+// タイマー・難易度
+// ═══════════════════════════════════════════
+
+let _difficulty = 'normal';  // 'easy' | 'normal' | 'hard'
+let _startTime  = null;
+let _elapsed    = 0;         // 累積ms（セーブ/ロード時に保持）
+let _timerIntvl = null;
+
+function startTimer() {
+  _startTime  = Date.now();
+  _timerIntvl = setInterval(_tickTimer, 1000);
+  _tickTimer();
+}
+
+function pauseTimer() {
+  if (_timerIntvl) { clearInterval(_timerIntvl); _timerIntvl = null; }
+  if (_startTime)  { _elapsed += Date.now() - _startTime; _startTime = null; }
+}
+
+function _getElapsed() {
+  return _elapsed + (_startTime ? Date.now() - _startTime : 0);
+}
+
+function _fmtTime(ms) {
+  const s = Math.floor(ms / 1000);
+  const m = Math.floor(s / 60);
+  const h = Math.floor(m / 60);
+  if (h > 0) return `${h}:${String(m % 60).padStart(2,'0')}:${String(s % 60).padStart(2,'0')}`;
+  return `${String(m).padStart(2,'0')}:${String(s % 60).padStart(2,'0')}`;
+}
+
+function _tickTimer() {
+  const el = $('play-time');
+  if (el) el.textContent = _fmtTime(_getElapsed());
+}
+
+function _applyDiffUI() {
+  const labels = { easy:'EASY', normal:'NORMAL', hard:'HARD' };
+  const dv = $('diff-val');
+  if (dv) { dv.textContent = labels[_difficulty]; dv.className = 'inv-sub-val ' + _difficulty; }
+  // ハードモードではヒントボタンを非表示
+  const hb = $('hint-btn');
+  if (hb) hb.style.display = (_difficulty === 'hard') ? 'none' : '';
 }
 
 // ═══════════════════════════════════════════
@@ -1576,13 +1694,16 @@ function checkFullMemory() {
 }
 
 function checkEndingAch(result) {
+  // 'bad' エンドは「クリア」に含めない
+  if (result === 'bad') return;
+
   // 特定エンディング実績を先に表示し、汎用「目覚めし者」を後から表示
   let specific = false;
   if (result === 'true')    { unlockAchievement('true_ach');   specific = true; }
   if (result === 'secret')  { unlockAchievement('secret_ach'); specific = true; }
   if (result === 'neutral') { unlockAchievement('normal_ach'); specific = true; }
   if (specific) setTimeout(() => unlockAchievement('awakened'), 4000);
-  else unlockAchievement('awakened');
+  else unlockAchievement('awakened'); // good ending
 }
 
 function showAchievements() {
@@ -1626,6 +1747,7 @@ function saveGame() {
     const data = {
       loc: P.loc, inv: [...P.inv], memCount: P.memCount,
       flags: [...P.flags], visited: [...P.visited],
+      elapsed: _getElapsed(), difficulty: _difficulty,
       savedAt: new Date().toLocaleString('ja-JP'),
     };
     localStorage.setItem(_SK, JSON.stringify(data));
@@ -1652,11 +1774,13 @@ function _applyPendingLoad() {
   if (!raw) return false;
   try {
     const d = JSON.parse(raw);
-    P.loc      = d.loc      || 'hospital_room';
-    P.inv      = d.inv      || [];
-    P.memCount = d.memCount || 0;
-    P.flags    = new Set(d.flags   || []);
-    P.visited  = new Set(d.visited || []);
+    P.loc       = d.loc        || 'hospital_room';
+    P.inv       = d.inv        || [];
+    P.memCount  = d.memCount   || 0;
+    P.flags     = new Set(d.flags   || []);
+    P.visited   = new Set(d.visited || []);
+    _elapsed    = d.elapsed    || 0;
+    _difficulty = d.difficulty || 'normal';
     return true;
   } catch(e) { return false; }
 }
@@ -1665,11 +1789,14 @@ function _applyPendingLoad() {
 // 起動
 // ═══════════════════════════════════════════
 
-async function startGame() {
-  _getAC(); // iOS Safari 対応: ユーザー操作内で AudioContext を初期化し playClick/playMemory を有効化
+async function startGame(diff = 'normal') {
+  _difficulty = diff;
+  _getAC();
+  startTimer();
   $('title-screen').style.display = 'none';
-  $('game-screen').style.display = 'flex';
+  $('game-screen').style.display  = 'flex';
   hud(); refreshInv();
+  _applyDiffUI();
   await tw('西暦2087年。あなたは目覚めた。', 'flavor', 28);
   await sleep(300);
   await showLoc(true);
@@ -1689,6 +1816,8 @@ _loadAch();
     $('game-screen').style.display  = 'flex';
     hud(); refreshInv();
     _getAC();
+    _applyDiffUI();
+    startTimer();
     await tw('ロードしました', 'pickup', 18);
     await sleep(200);
     await showLoc(false);
