@@ -14,9 +14,9 @@
   --green: #00ff9f;
   --red:   #ff3355;
   --orange:#ff6b35;
-  --text:  #a8ccde;
+  --text:  #d0eeff;
   --bright:#d0eeff;
-  --dim:   #3a5470;
+  --dim:   #d0eeff;
   --font:  'Share Tech Mono','Courier New',monospace;
 }
 
@@ -78,10 +78,36 @@ body {
 }
 .t-year {
   font-size: 12px;
-  color: var(--dim);
+  color: #d0eeff;
   letter-spacing: .2em;
   margin-bottom: 40px;
   text-align: center;
+}
+
+/* ── 装飾ライン ── */
+.t-deco {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 20px;
+  width: min(380px, 85vw);
+}
+.t-deco-line {
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(0,212,255,.55), transparent);
+}
+.t-deco-text {
+  color: rgba(0,212,255,.55);
+  font-size: 9px;
+  letter-spacing: .32em;
+  white-space: nowrap;
+}
+
+/* ── ボタン点滅 ── */
+@keyframes btn-pulse {
+  0%, 100% { opacity: 1; box-shadow: 0 0 10px var(--cyan), inset 0 0 8px rgba(0,212,255,.06); }
+  50%       { opacity: .45; box-shadow: 0 0 3px var(--cyan); }
 }
 #start-btn {
   padding: 12px 44px;
@@ -92,12 +118,58 @@ body {
   border: 1px solid var(--cyan);
   color: var(--cyan);
   cursor: pointer;
-  transition: all .2s;
-  box-shadow: 0 0 8px var(--cyan), inset 0 0 8px rgba(0,212,255,.05);
+  transition: background .2s, box-shadow .2s;
+  animation: btn-pulse 2.4s ease-in-out infinite;
 }
 #start-btn:hover, #start-btn:active {
+  animation-play-state: paused;
   background: rgba(0,212,255,.12);
   box-shadow: 0 0 24px var(--cyan), 0 0 48px rgba(0,212,255,.25);
+}
+
+/* ── タイトルグリッチ ── */
+.t-main {
+  position: relative;
+  animation: glitch-skew 14s ease-in-out infinite;
+}
+.t-main::before,
+.t-main::after {
+  content: attr(data-text);
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+.t-main::before {
+  color: #ff3355;
+  text-shadow: 2px 0 #ff3355;
+  animation: glitch-red 14s infinite;
+}
+.t-main::after {
+  color: var(--cyan);
+  text-shadow: -2px 0 var(--cyan);
+  animation: glitch-blue 14s infinite;
+}
+@keyframes glitch-skew {
+  0%,86%,100% { transform: none; }
+  87%          { transform: skewX(-1.5deg) translateX(2px); }
+  88%          { transform: none; }
+  89%          { transform: skewX(1deg) translateX(-1px); }
+  90%          { transform: none; }
+}
+@keyframes glitch-red {
+  0%,86%,100% { opacity:0; clip-path:none; transform:none; }
+  87%  { opacity:1; transform:translateX(-5px); clip-path:polygon(0 18%,100% 18%,100% 38%,0 38%); }
+  87.6%{ opacity:0; }
+  88.5%{ opacity:1; transform:translateX(4px);  clip-path:polygon(0 65%,100% 65%,100% 82%,0 82%); }
+  89%  { opacity:0; }
+}
+@keyframes glitch-blue {
+  0%,86%,100% { opacity:0; clip-path:none; transform:none; }
+  87%  { opacity:1; transform:translateX(5px);  clip-path:polygon(0 48%,100% 48%,100% 62%,0 62%); }
+  87.6%{ opacity:0; }
+  88.5%{ opacity:1; transform:translateX(-3px); clip-path:polygon(0 28%,100% 28%,100% 45%,0 45%); }
+  89%  { opacity:0; }
 }
 
 /* ── GAME SCREEN ── */
@@ -147,7 +219,7 @@ body {
 .op { margin-bottom: 8px; }
 .op.sep    { color: var(--dim); font-size: 10px; }
 .op.loc    { color: var(--cyan); font-size: 15px; border-left: 3px solid var(--cyan); padding-left: 9px; margin-top: 16px; }
-.op.flavor { color: #486070; font-style: italic; }
+.op.flavor { color: #a8d8f0; font-style: italic; }
 .op.exits  { color: var(--dim); font-size: 11px; }
 .op.pickup { color: #7ec87e; }
 .op.desc   { color: #7aaecc; }
@@ -374,7 +446,12 @@ body {
 
 <!-- タイトル -->
 <div id="title-screen">
-  <div class="t-main">記憶なき告発者</div>
+  <div class="t-deco">
+    <span class="t-deco-line"></span>
+    <span class="t-deco-text">NEMESIS CLASSIFIED SYSTEM v2.087</span>
+    <span class="t-deco-line"></span>
+  </div>
+  <div class="t-main" data-text="記憶なき告発者">記憶なき告発者</div>
   <div class="t-sub">～ NEMESIS : 2087 ～</div>
   <div class="t-year">西暦2087年。あなたは目覚めた。</div>
   <button id="start-btn" onclick="startGame()">▶ ゲームを始める</button>
@@ -957,68 +1034,13 @@ async function evEnding(ev) {
 // ═══════════════════════════════════════════
 
 const _ACtx = window.AudioContext || window.webkitAudioContext;
-let _ac = null;      // AudioContext インスタンス
-let _ambient = null; // 環境音ノード群
+let _ac = null; // AudioContext インスタンス
 
 // AudioContext を取得 or 再開（iOS は suspended になる場合がある）
 function _getAC() {
   if (!_ac) _ac = new _ACtx();
   if (_ac.state === 'suspended') _ac.resume();
   return _ac;
-}
-
-// ── 環境音（ループ） ──
-//
-// 設計方針:
-//   ・E メジャーコード (E4, G#4, B4, E5, B5) を使用
-//   ・最低音を E4=330Hz に設定 → 低域ドローン感ゼロ
-//   ・長3度 (G#4) を核心に置くことで「不気味でない暖かさ」を確保
-//   ・3.5秒かけてゆっくりフェードイン（映画的な立ち上がり）
-//   ・LFO 2本を異なる周期で動かし有機的な揺らぎを生む
-//
-// 参考イメージ: インターステラーのオルガンパッド、ゼルダの幻想的な空間音
-function startAmbient() {
-  if (_ambient) return;
-  const ac  = _getAC();
-  const now = ac.currentTime;
-
-  const master = ac.createGain();
-  master.gain.setValueAtTime(0, now);
-  master.gain.linearRampToValueAtTime(0.055, now + 3.5); // ゆっくりフェードイン
-  master.connect(ac.destination);
-
-  // E メジャーコード（低域なし・長3度で明るさを確保）
-  [
-    [329.63, 0.26], // E4  – 基音（最低音 330Hz、低域ドローン感なし）
-    [415.30, 0.22], // G#4 – 長3度（明るさ・温かさの核心）
-    [493.88, 0.16], // B4  – 完全5度（開放感）
-    [659.25, 0.09], // E5  – オクターブ上（輝き）
-    [987.77, 0.03], // B5  – 高域のきらめき（星の光）
-  ].forEach(([f, vol]) => {
-    const osc = ac.createOscillator();
-    const g   = ac.createGain();
-    osc.type = 'sine';
-    osc.frequency.value = f;
-    g.gain.value = vol;
-    osc.connect(g);
-    g.connect(master);
-    osc.start(now);
-  });
-
-  // LFO 2本で「宇宙空間を漂う」有機的な揺らぎを作る
-  // 周期が互いに素なので同じパターンが繰り返さず自然な変化になる
-  [[0.04, 0.011], [0.07, 0.007]].forEach(([rate, depth]) => {
-    const lfo  = ac.createOscillator();
-    const lfoG = ac.createGain();
-    lfo.type = 'sine';
-    lfo.frequency.value = rate;
-    lfoG.gain.value = depth;
-    lfo.connect(lfoG);
-    lfoG.connect(master.gain);
-    lfo.start(now);
-  });
-
-  _ambient = true;
 }
 
 // ── 選択肢クリック音 ──
@@ -1103,7 +1125,7 @@ function playMemory() {
 // ═══════════════════════════════════════════
 
 async function startGame() {
-  startAmbient(); // ユーザー操作内で呼ぶことで iOS Safari の制限を回避
+  _getAC(); // iOS Safari 対応: ユーザー操作内で AudioContext を初期化し playClick/playMemory を有効化
   $('title-screen').style.display = 'none';
   $('game-screen').style.display = 'flex';
   hud(); refreshInv();
