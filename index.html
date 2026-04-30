@@ -428,6 +428,82 @@ body {
   }
 }
 
+/* ── SAVE / LOAD / ACHIEVEMENTS ── */
+#save-btn, #load-btn, #achv-btn {
+  font-family: var(--font); font-size: 11px; letter-spacing: .05em;
+  color: rgba(0,212,255,.6); background: transparent;
+  border: 1px solid rgba(0,212,255,.25); padding: 3px 7px;
+  cursor: pointer; transition: all .15s; white-space: nowrap;
+  -webkit-tap-highlight-color: transparent;
+}
+#save-btn:hover, #save-btn:active,
+#load-btn:hover, #load-btn:active,
+#achv-btn:hover, #achv-btn:active {
+  color: var(--cyan); border-color: var(--cyan); box-shadow: 0 0 6px rgba(0,212,255,.25);
+}
+/* セーブ通知トースト */
+#save-toast {
+  position: fixed; bottom: 68px; left: 50%;
+  transform: translateX(-50%) translateY(8px);
+  background: var(--bg2); border: 1px solid rgba(0,212,255,.4);
+  color: var(--cyan); padding: 7px 18px; font-size: 12px;
+  font-family: var(--font); opacity: 0; pointer-events: none;
+  transition: opacity .25s, transform .25s; z-index: 300; white-space: nowrap;
+}
+#save-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+/* 実績解除トースト */
+#achv-toast {
+  position: fixed; top: 58px; right: 12px;
+  background: var(--bg2); border: 1px solid var(--green);
+  box-shadow: 0 0 14px rgba(0,255,159,.25);
+  padding: 10px 14px; display: flex; align-items: center; gap: 10px;
+  z-index: 300; transform: translateX(120%);
+  transition: transform .4s cubic-bezier(.2,.8,.3,1.1); max-width: 230px;
+}
+#achv-toast.show { transform: translateX(0); }
+#achv-toast-icon { font-size: 20px; color: var(--green); line-height: 1; flex-shrink: 0; }
+#achv-toast-label { font-size: 9px; letter-spacing: .25em; color: rgba(0,255,159,.65); }
+#achv-toast-name  { font-size: 13px; color: var(--green); margin-top: 2px; }
+/* 実績一覧オーバーレイ */
+#achv-overlay {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,.88); z-index: 110;
+  align-items: center; justify-content: center; padding: 16px;
+}
+#achv-box {
+  max-width: 460px; width: 100%; max-height: 85vh; overflow-y: auto;
+  border: 1px solid var(--green);
+  box-shadow: 0 0 20px rgba(0,255,159,.18); background: #040e0a;
+  padding: 18px 20px; -webkit-overflow-scrolling: touch;
+}
+.achv-hdr {
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid rgba(0,255,159,.2); padding-bottom: 9px; margin-bottom: 14px;
+}
+.achv-ttl { color: var(--green); font-size: 11px; letter-spacing: .3em; }
+#achv-x { background: transparent; border: none; color: var(--dim); font-size: 17px; cursor: pointer; padding: 0 3px; }
+#achv-x:hover { color: var(--orange); }
+.achv-item {
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,.05);
+}
+.achv-ico { font-size: 20px; width: 26px; text-align: center; flex-shrink: 0; }
+.achv-info { flex: 1; }
+.achv-nm  { font-size: 14px; margin-bottom: 3px; }
+.achv-ds  { font-size: 11px; }
+.achv-item.done .achv-ico { opacity: 1; }
+.achv-item.done .achv-nm  { color: var(--bright); }
+.achv-item.done .achv-ds  { color: var(--dim); }
+.achv-item.lock .achv-ico { opacity: .25; }
+.achv-item.lock .achv-nm  { color: var(--dim); }
+.achv-item.lock .achv-ds  { color: var(--dim); opacity: .55; }
+/* バージョン番号 */
+.t-version {
+  position: absolute; bottom: 14px; right: 18px;
+  font-size: 10px; letter-spacing: .18em; color: rgba(0,212,255,.28);
+  font-family: var(--font);
+}
+
 /* ── HINT SYSTEM ── */
 #hud-right {
   display: flex;
@@ -538,6 +614,7 @@ body {
   <div class="t-sub">～ NEMESIS : 2087 ～</div>
   <div class="t-year">西暦2087年。あなたは目覚めた。</div>
   <button id="start-btn" onclick="startGame()">▶ ゲームを始める</button>
+  <span class="t-version">ver 1.0.0</span>
 </div>
 
 <!-- ゲーム画面 -->
@@ -545,6 +622,9 @@ body {
   <div id="hud">
     <span id="loc-name">―</span>
     <div id="hud-right">
+      <button id="save-btn" onclick="saveGame()">SAVE</button>
+      <button id="load-btn" onclick="loadGame()">LOAD</button>
+      <button id="achv-btn" onclick="showAchievements()">実績</button>
       <button id="hint-btn" onclick="showHint()">? ヒント</button>
       <span id="mem-count">記憶: 0 / 7</span>
     </div>
@@ -578,6 +658,29 @@ body {
 <div id="end-screen">
   <div id="end-text"></div>
   <button id="retry-btn" onclick="location.reload()">↺ もう一度プレイする</button>
+</div>
+
+<!-- セーブ通知 -->
+<div id="save-toast"></div>
+
+<!-- 実績解除通知 -->
+<div id="achv-toast">
+  <div id="achv-toast-icon">★</div>
+  <div>
+    <div id="achv-toast-label">ACHIEVEMENT</div>
+    <div id="achv-toast-name"></div>
+  </div>
+</div>
+
+<!-- 実績一覧 -->
+<div id="achv-overlay">
+  <div id="achv-box">
+    <div class="achv-hdr">
+      <span class="achv-ttl">[ ACHIEVEMENTS ]</span>
+      <button id="achv-x" onclick="closeAchievements()">✕</button>
+    </div>
+    <div id="achv-list"></div>
+  </div>
 </div>
 
 <!-- ヒント -->
@@ -981,6 +1084,7 @@ async function doPickup() {
   const id = list[c];
   P.inv.push(id);
   refreshInv();
+  checkCollector();
   await tw(ITEM[id].pt, 'pickup');
 }
 
@@ -1053,6 +1157,7 @@ async function evMemory(ev) {
   P.flags.add(ev.flag);
   P.memCount++;
   hud(); refreshInv();
+  checkFullMemory();
   await tw('✦ ' + ev.sum, 'mem');
   if (P.memCount === 7) { await sleep(200); await tw('★ すべての記憶が戻った。真実が見えてきた。', 'mem'); }
 }
@@ -1122,6 +1227,7 @@ async function evEndCheck() {
 
 async function evEnding(ev) {
   P.over = true;
+  checkEndingAch(ev.result);
   clearBtns();
 
   // エンディング種別ごとの色・背景・速度
@@ -1423,6 +1529,139 @@ function closeHint() {
 }
 
 // ═══════════════════════════════════════════
+// 実績システム
+// ═══════════════════════════════════════════
+
+const ACHIEVE_DEF = {
+  awakened:   { name:'目覚めし者',     desc:'ゲームを初めてクリアした',                icon:'★' },
+  full_mem:   { name:'完全記憶',       desc:'全ての記憶の断片を回収した',              icon:'◎' },
+  collector:  { name:'コレクター',     desc:'全てのアイテムを集めた',                  icon:'◆' },
+  true_ach:   { name:'真実の探求者',   desc:'トゥルーエンディングに到達した',          icon:'✦' },
+  secret_ach: { name:'影の記録者',     desc:'シークレットエンディングに到達した',      icon:'▲' },
+  normal_ach: { name:'逃亡者',         desc:'ノーマルエンディングに到達した',          icon:'▷' },
+};
+
+const _AK = 'nemesis2087_ach';
+let _ach = {};
+let _achTimer = null;
+
+function _loadAch() {
+  try { _ach = JSON.parse(localStorage.getItem(_AK) || '{}'); } catch(e) { _ach = {}; }
+}
+
+function _saveAch() {
+  try { localStorage.setItem(_AK, JSON.stringify(_ach)); } catch(e) {}
+}
+
+function unlockAchievement(key) {
+  if (_ach[key]) return;
+  _ach[key] = Date.now();
+  _saveAch();
+  const def = ACHIEVE_DEF[key];
+  if (!def) return;
+  $('achv-toast-icon').textContent = def.icon;
+  $('achv-toast-name').textContent = def.name;
+  $('achv-toast').classList.add('show');
+  if (_achTimer) clearTimeout(_achTimer);
+  _achTimer = setTimeout(() => $('achv-toast').classList.remove('show'), 3500);
+}
+
+function checkCollector() {
+  const all = Object.keys(ITEM).filter(id => !ITEM[id].fixed);
+  if (all.every(id => P.inv.includes(id))) unlockAchievement('collector');
+}
+
+function checkFullMemory() {
+  if (P.memCount === 7) unlockAchievement('full_mem');
+}
+
+function checkEndingAch(result) {
+  // 特定エンディング実績を先に表示し、汎用「目覚めし者」を後から表示
+  let specific = false;
+  if (result === 'true')    { unlockAchievement('true_ach');   specific = true; }
+  if (result === 'secret')  { unlockAchievement('secret_ach'); specific = true; }
+  if (result === 'neutral') { unlockAchievement('normal_ach'); specific = true; }
+  if (specific) setTimeout(() => unlockAchievement('awakened'), 4000);
+  else unlockAchievement('awakened');
+}
+
+function showAchievements() {
+  const list = $('achv-list');
+  list.innerHTML = '';
+  Object.entries(ACHIEVE_DEF).forEach(([key, def]) => {
+    const done = !!_ach[key];
+    const el = document.createElement('div');
+    el.className = 'achv-item ' + (done ? 'done' : 'lock');
+    el.innerHTML =
+      `<span class="achv-ico">${def.icon}</span>` +
+      `<div class="achv-info">` +
+        `<div class="achv-nm">${done ? def.name : '???'}</div>` +
+        `<div class="achv-ds">${done ? def.desc : '未解除'}</div>` +
+      `</div>`;
+    list.appendChild(el);
+  });
+  $('achv-overlay').style.display = 'flex';
+}
+
+function closeAchievements() { $('achv-overlay').style.display = 'none'; }
+
+// ═══════════════════════════════════════════
+// セーブ・ロード
+// ═══════════════════════════════════════════
+
+const _SK = 'nemesis2087_save';
+const _PK = 'nemesis2087_pend';
+let _saveTimer = null;
+
+function _showMsg(msg) {
+  const el = $('save-toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  if (_saveTimer) clearTimeout(_saveTimer);
+  _saveTimer = setTimeout(() => el.classList.remove('show'), 2500);
+}
+
+function saveGame() {
+  try {
+    const data = {
+      loc: P.loc, inv: [...P.inv], memCount: P.memCount,
+      flags: [...P.flags], visited: [...P.visited],
+      savedAt: new Date().toLocaleString('ja-JP'),
+    };
+    localStorage.setItem(_SK, JSON.stringify(data));
+    _showMsg('✓ セーブしました');
+  } catch(e) { _showMsg('✕ セーブに失敗しました'); }
+}
+
+function loadGame() {
+  const raw = localStorage.getItem(_SK);
+  if (!raw) { _showMsg('セーブデータが見つかりません'); return; }
+  let data;
+  try { data = JSON.parse(raw); } catch(e) { _showMsg('データが破損しています'); return; }
+  if (!confirm(`セーブデータをロードしますか？\n保存日時: ${data.savedAt || '不明'}\n現在の進行状況は失われます。`)) return;
+  // ページリロード方式でゲームループの競合を回避
+  localStorage.setItem(_PK, '1');
+  location.reload();
+}
+
+// ページロード時にペンディングロードがあれば自動復元
+function _applyPendingLoad() {
+  if (!localStorage.getItem(_PK)) return false;
+  localStorage.removeItem(_PK);
+  const raw = localStorage.getItem(_SK);
+  if (!raw) return false;
+  try {
+    const d = JSON.parse(raw);
+    P.loc      = d.loc      || 'hospital_room';
+    P.inv      = d.inv      || [];
+    P.memCount = d.memCount || 0;
+    P.flags    = new Set(d.flags   || []);
+    P.visited  = new Set(d.visited || []);
+    return true;
+  } catch(e) { return false; }
+}
+
+// ═══════════════════════════════════════════
 // 起動
 // ═══════════════════════════════════════════
 
@@ -1436,6 +1675,26 @@ async function startGame() {
   await showLoc(true);
   loop();
 }
+
+// ─── 初期化 ───
+// 実績データをLocalStorageから復元
+_loadAch();
+
+// ページリロードによるロード復元（loadGame()からのリロード後）
+(function () {
+  if (!_applyPendingLoad()) return;
+  // ロードデータあり → タイトルをスキップしてゲームを直接開始
+  setTimeout(async () => {
+    $('title-screen').style.display = 'none';
+    $('game-screen').style.display  = 'flex';
+    hud(); refreshInv();
+    _getAC();
+    await tw('ロードしました', 'pickup', 18);
+    await sleep(200);
+    await showLoc(false);
+    loop();
+  }, 50);
+})();
 </script>
 </body>
 </html>
