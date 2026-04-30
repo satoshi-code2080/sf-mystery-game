@@ -23,7 +23,7 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 body {
-  background: var(--bg);
+  background: transparent;
   color: var(--text);
   font-family: var(--font);
   font-size: 15px;
@@ -41,7 +41,7 @@ body {
   align-items: center;
   justify-content: center;
   height: 100dvh;
-  background: radial-gradient(ellipse at 50% 40%, #0d1a3a 0%, #080c1a 70%);
+  background: radial-gradient(ellipse at 50% 40%, rgba(13,26,58,0.75) 0%, rgba(8,12,26,0.35) 70%);
   position: relative;
   overflow: hidden;
 }
@@ -855,63 +855,61 @@ async function evEnding(ev) {
 // ═══════════════════════════════════════════
 
 (function () {
-  const canvas = $('stars-canvas');
+  const canvas = document.getElementById('stars-canvas');
   const ctx = canvas.getContext('2d');
-  const COUNT = 75;
-  let stars = [];
+  const COUNT = 30;
+  let W, H, stars = [];
 
-  function resize() {
-    canvas.width  = window.innerWidth;
-    canvas.height = window.innerHeight;
-  }
+  function rand(a, b) { return a + Math.random() * (b - a); }
 
-  function randBetween(a, b) { return a + Math.random() * (b - a); }
-
-  function createStar() {
+  function makeStar(fromBottom) {
     return {
-      x:      randBetween(0, canvas.width),
-      y:      randBetween(0, canvas.height),
-      r:      randBetween(0.4, 1.6),
-      speed:  randBetween(0.15, 0.55),
-      opacity:randBetween(0.2, 0.75),
-      // 微妙に左右へ揺れる量
-      drift:  randBetween(-0.08, 0.08),
+      x: rand(0, W),
+      y: fromBottom ? rand(H * 0.5, H + 10) : rand(0, H),
+      r: rand(0.5, 1.8),
+      speed: rand(0.12, 0.45),
+      opacity: rand(0.25, 0.8),
+      drift: rand(-0.06, 0.06),
     };
   }
 
-  function initStars() {
-    stars = Array.from({ length: COUNT }, createStar);
+  function resize() {
+    W = canvas.width  = window.innerWidth;
+    H = canvas.height = window.innerHeight;
+    stars = Array.from({ length: COUNT }, () => makeStar(false));
   }
 
   function draw() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    // 背景を毎フレーム塗りつぶす（canvas が page background を担う）
+    ctx.fillStyle = '#080c1a';
+    ctx.fillRect(0, 0, W, H);
 
     for (const s of stars) {
-      // 上方向へ移動
       s.y -= s.speed;
       s.x += s.drift;
 
-      // 画面上端を超えたら下からリスポーン
       if (s.y + s.r < 0) {
-        s.y = canvas.height + s.r;
-        s.x = randBetween(0, canvas.width);
+        // 画面上端を超えたら下端からリスポーン
+        Object.assign(s, makeStar(true));
+        s.y = H + s.r;
       }
 
-      // グロウ付き描画
+      ctx.save();
+      ctx.globalAlpha = s.opacity;
+      ctx.shadowBlur  = s.r * 5;
+      ctx.shadowColor = 'rgba(160, 220, 255, 0.9)';
+      ctx.fillStyle   = '#c8e8ff';
       ctx.beginPath();
       ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
-      ctx.shadowBlur  = s.r * 4;
-      ctx.shadowColor = `rgba(180, 230, 255, ${s.opacity * 0.6})`;
-      ctx.fillStyle   = `rgba(200, 235, 255, ${s.opacity})`;
       ctx.fill();
+      ctx.restore();
     }
 
     requestAnimationFrame(draw);
   }
 
-  window.addEventListener('resize', () => { resize(); initStars(); });
+  window.addEventListener('resize', resize);
   resize();
-  initStars();
   draw();
 })();
 
