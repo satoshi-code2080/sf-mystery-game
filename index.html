@@ -631,33 +631,48 @@ body {
 #hint-close-btn:hover, #hint-close-btn:active { border-color: var(--orange); color: var(--orange); }
 
 /* ── CHARACTER PORTRAIT ── */
+/* ── Desktop：インベントリパネルと同幅・同位置に配置しテキストと完全分離 ── */
 #char-portrait {
   position: fixed;
-  bottom: 0;
+  bottom: 88px;          /* ボタンエリア上部まで（btn-area max内） */
   right: 0;
-  height: 46vh;
-  width: auto;
-  max-width: 38vw;
+  width: 160px;          /* インベントリパネルと同幅 → テキストエリアには絶対重ならない */
+  max-width: 160px;
+  height: 42vh;
   object-fit: contain;
-  object-position: bottom right;
+  object-position: bottom center;
   pointer-events: none;
-  z-index: 50;           /* 星より上、オーバーレイ(100+)より下 */
+  z-index: 50;
   opacity: 0;
-  transform: translateX(24px);
+  transform: translateX(18px);
   transition: opacity .5s ease, transform .5s ease;
-  /* 左端をフェードして背景に自然になじませる */
-  -webkit-mask-image: linear-gradient(to right, transparent 0%, black 18%);
-  mask-image:         linear-gradient(to right, transparent 0%, black 18%);
-  filter: drop-shadow(-6px 0 16px rgba(0,0,0,.85));
+  -webkit-mask-image: linear-gradient(to right, transparent 0%, black 22%);
+  mask-image:         linear-gradient(to right, transparent 0%, black 22%);
+  filter: drop-shadow(-5px 0 14px rgba(0,0,0,.9));
 }
 #char-portrait.visible {
   opacity: 1;
   transform: translateX(0);
 }
+
+/* ── スマホ：上部右隅（HUD直下）に小さく配置 ──
+   テキストは tw() で常に下端にスクロールされるため
+   最新テキストと重ならない。上部の読み終えた文と重なるのみ。 ── */
 @media (max-width: 580px) {
   #char-portrait {
-    height: 34vh;
-    max-width: 52vw;
+    top: 46px;             /* HUD直下 */
+    bottom: auto;
+    right: 0;
+    width: auto;
+    max-width: 28vw;       /* 375px × 0.28 ≈ 105px 幅 */
+    height: 19vh;          /* 812px × 0.19 ≈ 154px 高さ */
+    object-position: top center;
+    -webkit-mask-image: linear-gradient(to right,  transparent 0%, black 18%),
+                        linear-gradient(to bottom, black 60%, transparent 100%);
+    mask-image:         linear-gradient(to right,  transparent 0%, black 18%),
+                        linear-gradient(to bottom, black 60%, transparent 100%);
+    -webkit-mask-composite: destination-in;
+    mask-composite: intersect;
   }
 }
 
