@@ -630,6 +630,37 @@ body {
 }
 #hint-close-btn:hover, #hint-close-btn:active { border-color: var(--orange); color: var(--orange); }
 
+/* ── CHARACTER PORTRAIT ── */
+#char-portrait {
+  position: fixed;
+  bottom: 0;
+  right: 0;
+  height: 46vh;
+  width: auto;
+  max-width: 38vw;
+  object-fit: contain;
+  object-position: bottom right;
+  pointer-events: none;
+  z-index: 50;           /* 星より上、オーバーレイ(100+)より下 */
+  opacity: 0;
+  transform: translateX(24px);
+  transition: opacity .5s ease, transform .5s ease;
+  /* 左端をフェードして背景に自然になじませる */
+  -webkit-mask-image: linear-gradient(to right, transparent 0%, black 18%);
+  mask-image:         linear-gradient(to right, transparent 0%, black 18%);
+  filter: drop-shadow(-6px 0 16px rgba(0,0,0,.85));
+}
+#char-portrait.visible {
+  opacity: 1;
+  transform: translateX(0);
+}
+@media (max-width: 580px) {
+  #char-portrait {
+    height: 34vh;
+    max-width: 52vw;
+  }
+}
+
 /* ── STARS ── */
 #stars-canvas {
   position: fixed;
@@ -645,6 +676,7 @@ body {
 </head>
 <body>
 <canvas id="stars-canvas"></canvas>
+<img id="char-portrait" src="" alt="" />
 
 <!-- タイトル -->
 <div id="title-screen">
@@ -855,7 +887,7 @@ const EV = {
   memory_7: { type:'memory', frag:'日記の文字を見た瞬間、声が聞こえた気がした。\n「キラ、世界を変えよう」――仲間の声。\n「監視されている人たちを、助けたい」――自分の声。\nあなたはただのエンジニアじゃなかった。\n守りたい人たちのために、戦っていた。', flag:'knows_motivation', sum:'記憶の断片⑦：あなたが戦った理由' },
 
   agent_encounter: {
-    type: 'encounter', doneFlag: 'agent_encountered',
+    type: 'encounter', doneFlag: 'agent_encountered', character: 'agent',
     text: 'スーツの男がゆっくりとこちらへ近づいてくる。\n耳には通信イヤホン。腰のホルスターに、武器の膨らみ。\n視線が交差した瞬間、男の目が細くなった。',
     choices: [
       { label:'ICカードを使って改札を通り、自然に振る舞う', need:'ic_card',     flag:'escaped_agent', res:'ICカードをスキャナーにかざす。ピッ、と電子音が鳴る。\n男はじっとこちらを見ていたが、やがて視線を外した。\n心臓の音が耳に聞こえる中、あなたはホームへ歩き出した。\n――うまくいった。', bad:false },
@@ -874,7 +906,7 @@ const EV = {
   inspect_security_log: { type:'story', flag:'knows_nexus_blind', reqFlag:null, noFlagText:null, reqLoc:null, noLocText:null, text:'ログを読み進めると、全貌が見えてくる。\nNEXUSはあなたの全行動を把握していた。しかし――。\n「K-77、証拠チップの所在は依然不明。\n　記憶消去による情報封鎖は有効と判断。監視継続」\n彼らはチップの隠し場所を知らない。\nあなたが命がけで隠したから。まだ、間に合う。', unlockFlag:'knows_nexus_blind', sum:'監視ログ解析：NEXUSはまだチップの場所を知らない' },
 
   hacker_encounter: {
-    type: 'encounter', doneFlag: 'hacker_encountered',
+    type: 'encounter', doneFlag: 'hacker_encountered', character: 'hacker',
     text: 'フードの人物がゆっくりとこちらを向く。\nモニターの青白い光に照らされた顔は、まだ若い。\n「……ようやく目が覚めたか、K-77。\n　お前のことは追っていた。三日間ずっと」\nホログラムモニターに、あなたの行動記録が映し出された。',
     choices: [
       {
@@ -1216,12 +1248,15 @@ async function evMemory(ev) {
   P.memCount++;
   hud(); refreshInv();
   checkFullMemory();
+  showChar('kira');   // 記憶が戻るシーンでキラのポートレートを表示
   await tw('✦ ' + ev.sum, 'mem');
   if (P.memCount === 7) { await sleep(200); await tw('★ すべての記憶が戻った。真実が見えてきた。', 'mem'); }
+  hideChar(3500);     // 3.5秒後に自動的にフェードアウト
 }
 
 async function evEncounter(ev) {
   if (P.flags.has(ev.doneFlag)) return;
+  if (ev.character) showChar(ev.character);  // エンカウンター開始時にキャラクター表示
   await tw(ev.text, 'event');
   await sleep(200);
 
@@ -1244,6 +1279,7 @@ async function evEncounter(ev) {
   await tw(sel.res, 'event');
   P.flags.add(sel.flag);
   P.flags.add(ev.doneFlag);
+  if (ev.character) hideChar(sel.bad ? 0 : 2000);  // 会話終了後にキャラクターをフェードアウト
   if (sel.bad) { await sleep(700); await runEv('bad_ending_caught'); }
 }
 
@@ -1606,6 +1642,43 @@ function nextHint() {
 
 function closeHint() {
   $('hint-overlay').style.display = 'none';
+}
+
+// ═══════════════════════════════════════════
+// キャラクターポートレート
+// ═══════════════════════════════════════════
+
+const CHAR_IMG = {
+  kira:   'ambrish_ai-ai-generated-8686219_1920.jpg',
+  agent:  'fbartondavis-ai-generated-9676144_1920.png',
+  hacker: 'vilkasss-ai-generated-9111148_1920.jpg',
+};
+
+let _charTimer = null;
+
+function showChar(name) {
+  const img = $('char-portrait');
+  if (!img) return;
+  const src = CHAR_IMG[name];
+  if (!src) { hideChar(); return; }
+  if (img.dataset.char === name && img.classList.contains('visible')) return;
+  img.dataset.char = name;
+  img.src = src;
+  // 画像ロード後にフェードイン（すでにキャッシュ済みの場合も対応）
+  img.onload = () => img.classList.add('visible');
+  if (img.complete) img.classList.add('visible');
+}
+
+function hideChar(delay = 0) {
+  if (_charTimer) clearTimeout(_charTimer);
+  const img = $('char-portrait');
+  if (!img) return;
+  if (delay > 0) {
+    _charTimer = setTimeout(() => { img.classList.remove('visible'); img.dataset.char = ''; }, delay);
+  } else {
+    img.classList.remove('visible');
+    img.dataset.char = '';
+  }
 }
 
 // ═══════════════════════════════════════════
